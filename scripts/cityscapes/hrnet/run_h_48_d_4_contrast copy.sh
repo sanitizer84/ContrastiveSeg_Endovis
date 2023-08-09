@@ -16,7 +16,7 @@ DATA_DIR="/tmp/cityscapes"
 SAVE_DIR="${P_PATH}/cityscapes"
 BACKBONE="hrnet48"
 
-CONFIGS="${P_PATH}/configs/cityscapes/H_48_D_4.json"
+CONFIGS="configs/cityscapes/H_48_D_4.json"
 CONFIGS_TEST="configs/cityscapes/H_48_D_4_TEST.json"
 
 MODEL_NAME="hrnet_w48_contrast"
@@ -34,26 +34,26 @@ BATCH_SIZE=8
 BASE_LR=0.01
 
 if [ "$1"x == "train"x ]; then
-  python ${P_PATH}/main_contrastive.py --configs ${CONFIGS} \
-                          --drop_last y \
-                          --phase train \
-                          --gathered y \
-                          --loss_balance y \
-                          --pretrained ${PRETRAINED_MODEL} \
-                          --log_to_file n \
-                          --backbone ${BACKBONE} \
-                          --model_name ${MODEL_NAME} \
-                          --gpu 0 1 2 3 \
-                          --data_dir ${DATA_DIR} \
-                          --loss_type ${LOSS_TYPE} \
-                          --max_iters ${MAX_ITERS} \
-                          --checkpoints_root ${CHECKPOINTS_ROOT} \
-                          --checkpoints_name ${CHECKPOINTS_NAME} \
-                          --pretrained ${PRETRAINED_MODEL} \
-                          --train_batch_size ${BATCH_SIZE} \
-                          # --distributed \
-                          --base_lr ${BASE_LR} \
-                          2>&1 | tee ${LOG_FILE}
+  python -u ${P_PATH}/main_contrastive.py --configs ${CONFIGS} \
+                       --drop_last y \
+                       --phase train \
+                       --gathered n \
+                       --loss_balance y \
+                       --log_to_file n \
+                       --backbone ${BACKBONE} \
+                       --model_name ${MODEL_NAME} \
+                       --gpu 0 1 2 3 \
+                       --data_dir ${DATA_DIR} \
+                       --loss_type ${LOSS_TYPE} \
+                       --max_iters ${MAX_ITERS} \
+                       --checkpoints_root ${CHECKPOINTS_ROOT} \
+                       --checkpoints_name ${CHECKPOINTS_NAME} \
+                       --pretrained ${PRETRAINED_MODEL} \
+                       --train_batch_size ${BATCH_SIZE} \
+                       --distributed \
+                       --base_lr ${BASE_LR} \
+                       2>&1 | tee ${LOG_FILE}
+
 
 elif [ "$1"x == "resume"x ]; then
   python -u main_contrastive.py --configs ${CONFIGS} \
@@ -72,8 +72,8 @@ elif [ "$1"x == "resume"x ]; then
                        --checkpoints_name ${CHECKPOINTS_NAME} \
                        --resume_continue y \
                        --resume ${CHECKPOINTS_ROOT}/checkpoints/cityscapes/${CHECKPOINTS_NAME}_latest.pth \
-                       --train_batch_size ${BATCH_SIZE}
-                      #  --distributed n \
+                       --train_batch_size ${BATCH_SIZE} \
+                       --distributed \
                         2>&1 | tee -a ${LOG_FILE}
 
 
