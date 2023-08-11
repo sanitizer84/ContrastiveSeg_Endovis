@@ -1,37 +1,36 @@
 #!/usr/bin/env bash
-SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-cd $SCRIPTPATH
-cd ../../../
-
-DATA_ROOT=$3
-SCRATCH_ROOT=$4
-ASSET_ROOT=${DATA_ROOT}
-
-DATA_DIR="${DATA_ROOT}/Cityscapes"
-SAVE_DIR="${SCRATCH_ROOT}/seg_results/cityscapes"
+# Params:
+# $1: train, val, test, segfix
+# $2: 1, 2, 3... index of run
+# $3: if segfix, val or test
+# $4: ss, ms
+P_PATH="../../.."
+DATA_DIR="/tmp/cityscapes"
+SAVE_DIR="${P_PATH}/output/cityscapes"
 BACKBONE="deepbase_resnet101_dilated8"
 
-CONFIGS="configs/cityscapes/R_101_D_8.json"
-CONFIGS_TEST="configs/cityscapes/R_101_D_8_TEST.json"
+CONFIGS="${P_PATH}/configs/cityscapes/R_101_D_8.json"
+CONFIGS_TEST="${P_PATH}/cconfigs/cityscapes/R_101_D_8_TEST.json"
 
 MODEL_NAME="deeplab_v3_contrast"
 LOSS_TYPE="contrast_auxce_loss"
-CHECKPOINTS_ROOT="${SCRATCH_ROOT}/Cityscapes/"
+CHECKPOINTS_ROOT="${P_PATH=}/cityscapes/"
 CHECKPOINTS_NAME="${MODEL_NAME}_${BACKBONE}_"$2
-LOG_FILE="${SCRATCH_ROOT}/logs/Cityscapes/${CHECKPOINTS_NAME}.log"
+LOG_FILE="${P_PATH}/logs/cityscapes/${CHECKPOINTS_NAME}.log"
 echo "Logging to $LOG_FILE"
 mkdir -p `dirname $LOG_FILE`
 
-PRETRAINED_MODEL="${ASSET_ROOT}/resnet101-imagenet.pth"
+# PRETRAINED_MODEL="${P_PATH}/pretrained_model/resnet101_deeplabv3_dilated8.pth"
+PRETRAINED_MODEL="${P_PATH}/pretrained_model/resnet101-5d3b4d8f.pth"
 MAX_ITERS=40000
 BATCH_SIZE=8
 BASE_LR=0.01
 
 if [ "$1"x == "train"x ]; then
-  python -u main_contrastive.py --configs ${CONFIGS} \
+  python -u ${P_PATH}/main_contrastive.py --configs ${CONFIGS} \
                        --drop_last y \
                        --phase train \
-                       --gathered n \
+                       --gathered y \
                        --loss_balance y \
                        --log_to_file n \
                        --backbone ${BACKBONE} \
@@ -45,8 +44,8 @@ if [ "$1"x == "train"x ]; then
                        --pretrained ${PRETRAINED_MODEL} \
                        --distributed \
                        --train_batch_size ${BATCH_SIZE} \
-                       --base_lr ${BASE_LR} \
-                       2>&1 | tee ${LOG_FILE}
+                       --base_lr ${BASE_LR}
+                      #  2>&1 | tee ${LOG_FILE}
                        
 
 elif [ "$1"x == "resume"x ]; then

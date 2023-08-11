@@ -2,9 +2,7 @@
 Copyright (C) 2019 NVIDIA Corporation.  All rights reserved.
 Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode).
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
 
 __all__ = ['PacConv2d', 'PacConvTranspose2d', 'PacPool2d',
            'pacconv2d', 'pacconv_transpose2d', 'pacpool2d', 'packernel2d', 'nd2col']

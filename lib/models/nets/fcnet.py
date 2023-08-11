@@ -46,19 +46,19 @@ class FcnNet(nn.Module):
             nn.Conv2d(512, self.num_classes, kernel_size=1, stride=1, padding=0, bias=False)
         )
 
-        if "mobilenetv2" in self.configer.get('network', 'backbone'):
-            self.cls_head = nn.Sequential(
-                nn.Conv2d(in_channels[1], 256, kernel_size=3, stride=1, padding=1),
-                ModuleHelper.BNReLU(256, bn_type=self.configer.get('network', 'bn_type')),
-                nn.Dropout2d(0.10),
-                nn.Conv2d(256, self.num_classes, kernel_size=1, stride=1, padding=0, bias=False)
-            )
-            self.dsn_head = nn.Sequential(
-                nn.Conv2d(in_channels[0], 128, kernel_size=3, stride=1, padding=1),
-                ModuleHelper.BNReLU(128, bn_type=self.configer.get('network', 'bn_type')),
-                nn.Dropout2d(0.10),
-                nn.Conv2d(128, self.num_classes, kernel_size=1, stride=1, padding=0, bias=False)
-            )
+        # if "mobilenetv2" in self.configer.get('network', 'backbone'):
+        #     self.cls_head = nn.Sequential(
+        #         nn.Conv2d(in_channels[1], 256, kernel_size=3, stride=1, padding=1),
+        #         ModuleHelper.BNReLU(256, bn_type=self.configer.get('network', 'bn_type')),
+        #         nn.Dropout2d(0.10),
+        #         nn.Conv2d(256, self.num_classes, kernel_size=1, stride=1, padding=0, bias=False)
+        #     )
+        #     self.dsn_head = nn.Sequential(
+        #         nn.Conv2d(in_channels[0], 128, kernel_size=3, stride=1, padding=1),
+        #         ModuleHelper.BNReLU(128, bn_type=self.configer.get('network', 'bn_type')),
+        #         nn.Dropout2d(0.10),
+        #         nn.Conv2d(128, self.num_classes, kernel_size=1, stride=1, padding=0, bias=False)
+        #     )
 
     def forward(self, x_):
         x = self.backbone(x_)
@@ -80,8 +80,8 @@ class FcnNet_wo_dsn(nn.Module):
         # extra added layers
         if "wide_resnet38" in self.configer.get('network', 'backbone'):
             in_channels = [2048, 4096]
-        elif "mobilenetv2" in self.configer.get('network', 'backbone'):
-            in_channels = [160, 320]
+        # elif "mobilenetv2" in self.configer.get('network', 'backbone'):
+        #     in_channels = [160, 320]
         else:
             in_channels = [1024, 2048]
         self.cls_head = nn.Sequential(
@@ -91,13 +91,13 @@ class FcnNet_wo_dsn(nn.Module):
             nn.Conv2d(512, self.num_classes, kernel_size=1, stride=1, padding=0, bias=True)
         )
 
-        if "mobilenetv2" in self.configer.get('network', 'backbone'):
-            self.cls_head = nn.Sequential(
-                nn.Conv2d(in_channels[1], 256, kernel_size=3, stride=1, padding=1),
-                ModuleHelper.BNReLU(256, bn_type=self.configer.get('network', 'bn_type')),
-                nn.Dropout2d(0.10),
-                nn.Conv2d(256, self.num_classes, kernel_size=1, stride=1, padding=0, bias=False)
-            )
+        # if "mobilenetv2" in self.configer.get('network', 'backbone'):
+        #     self.cls_head = nn.Sequential(
+        #         nn.Conv2d(in_channels[1], 256, kernel_size=3, stride=1, padding=1),
+        #         ModuleHelper.BNReLU(256, bn_type=self.configer.get('network', 'bn_type')),
+        #         nn.Dropout2d(0.10),
+        #         nn.Conv2d(256, self.num_classes, kernel_size=1, stride=1, padding=0, bias=False)
+        #     )
 
     def forward(self, x_):
         x = self.backbone(x_)

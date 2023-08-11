@@ -5,9 +5,7 @@
 # Select Seg Model for img segmentation.
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
 
 import math
 from collections import OrderedDict
@@ -17,7 +15,6 @@ from lib.models.tools.module_helper import ModuleHelper
 from lib.models.backbones.resnet.wide_resnet_models import WiderResNetA2
 
 model_urls = {
-    'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
     'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
     'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
     'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
@@ -183,46 +180,6 @@ class ResNetModels(object):
     def __init__(self, configer):
         self.configer = configer
 
-    def resnet18(self, **kwargs):
-        """Constructs a ResNet-18 model.
-        Args:
-            pretrained (bool): If True, returns a model pre-trained on Places
-        """
-        model = ResNet(BasicBlock, [2, 2, 2, 2], deep_base=False,
-                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
-        return model
-
-    def deepbase_resnet18(self, **kwargs):
-        """Constructs a ResNet-18 model.
-        Args:
-            pretrained (bool): If True, returns a model pre-trained on Places
-        """
-        model = ResNet(BasicBlock, [2, 2, 2, 2], deep_base=True,
-                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
-        return model
-
-    def resnet34(self, **kwargs):
-        """Constructs a ResNet-34 model.
-        Args:
-            pretrained (bool): If True, returns a model pre-trained on Places
-        """
-        model = ResNet(BasicBlock, [3, 4, 6, 3], deep_base=False,
-                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
-        return model
-
-    def deepbase_resnet34(self, **kwargs):
-        """Constructs a ResNet-34 model.
-        Args:
-            pretrained (bool): If True, returns a model pre-trained on Places
-        """
-        model = ResNet(BasicBlock, [3, 4, 6, 3], deep_base=True,
-                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
-        return model
-
     def resnet50(self, **kwargs):
         """Constructs a ResNet-50 model.
         Args:
@@ -260,6 +217,9 @@ class ResNetModels(object):
         """
         model = ResNet(Bottleneck, [3, 4, 23, 3], deep_base=True,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
+        # todo: 需要找到deeplabv3 的imagenet预训练模型
+
+        print(self.configer.get('network', 'pretrained'))
         model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))
         return model
 

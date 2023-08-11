@@ -6,9 +6,7 @@
 # "High-Resolution Representations for Labeling Pixels and Regions"
 # ------------------------------------------------------------------------------
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
 
 import os
 import pdb
@@ -748,17 +746,7 @@ class HRNetBackbone(object):
         resume = self.configer.get('network', 'resume')
         from lib.models.backbones.hrnet.hrnet_config import MODEL_CONFIGS
 
-        if arch == 'hrnet18':
-            arch_net = HighResolutionNet(MODEL_CONFIGS['hrnet18'],
-                                         bn_type='torchsyncbn',
-                                         bn_momentum=0.1)
-            if resume is None:
-                arch_net = ModuleHelper.load_model(arch_net,
-                                                   pretrained=self.configer.get('network', 'pretrained'),
-                                                   all_match=False,
-                                                   network='hrnet')
-
-        elif arch == 'hrnet32':
+        if arch == 'hrnet32':
             arch_net = HighResolutionNet(MODEL_CONFIGS['hrnet32'],
                                          bn_type='torchsyncbn',
                                          bn_momentum=0.1)

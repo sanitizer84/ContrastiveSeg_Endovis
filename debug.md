@@ -10,3 +10,17 @@ loss_contrast.py  174行， forward函数一开始增加以下内容。preds多�
         # duhj
         preds = preds[0]
         # duhj  
+
+
+Token-to-Token ViT
+论文：Tokens-to-Token ViT: Training Vision Transformers from Scratch on ImageNet
+
+论文链接：https://arxiv.org/pdf/2101.11986.pdf
+
+论文解读： https://zhuanlan.zhihu.com/p/354522966
+
+论文解读：https://zhuanlan.zhihu.com/p/465148038
+
+摘要：ViT在没有庞大数据规模的数据集上效果不如传统的ResNet。T2T-ViT相比于ViT，参数量和MACs(Multi-Adds)减少了200%，性能在ImageNet上有2.5%的提升，又快又强。
+
+

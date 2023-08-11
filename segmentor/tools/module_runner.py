@@ -4,9 +4,7 @@
 # Some methods used by main methods.
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
 
 import math
 import os
@@ -83,9 +81,16 @@ class ModuleRunner(object):
             net = net.to(torch.device('cpu' if self.configer.get('gpu') is None else 'cuda'))
 
         net.float()
+        # 读取保存的模型参数
         if self.configer.get('network', 'resume') is not None:
             Log.info('Loading checkpoint from {}...'.format(self.configer.get('network', 'resume')))
-            resume_dict = torch.load(self.configer.get('network', 'resume'), map_location=lambda storage, loc: storage)
+            print('===================')
+            # print (os.getcwd())#获得当前目录
+            print(os.path.join(os.getcwd(), self.configer.get('network', 'resume')))
+            resume_dict = torch.load(
+                os.path.join(os.getcwd(), self.configer.get('network', 'resume')), 
+                map_location=lambda storage, loc: storage
+                )
             if 'state_dict' in resume_dict:
                 checkpoint_dict = resume_dict['state_dict']
 

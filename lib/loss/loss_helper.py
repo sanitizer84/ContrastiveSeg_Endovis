@@ -8,9 +8,7 @@
 ## LICENSE file in the root directory of this source tree 
 ##+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
 
 import os
 import pdb
@@ -69,7 +67,7 @@ class FSCERMILoss(nn.Module):
 
             loss_rmi = self.rmi_loss(inputs, target)
 
-            loss = loss + loss_rmi
+            loss += loss_rmi
 
         return loss
 
@@ -119,7 +117,7 @@ class FSCELOVASZLoss(nn.Module):
             loss_lovasz = lovasz_softmax_flat(*flatten_probas(pred, target, self.ignore_index),
                                               only_present=True)
 
-            loss = loss + loss_lovasz
+            loss += loss_lovasz
 
         return loss
 
@@ -212,90 +210,53 @@ class FSCELoss(nn.Module):
         return targets.squeeze(1).long()
 
 
-class FSOhemCELoss(nn.Module):
-    def __init__(self, configer):
-        super(FSOhemCELoss, self).__init__()
-        self.configer = configer
-        self.thresh = self.configer.get('loss', 'params')['ohem_thresh']
-        self.min_kept = max(1, self.configer.get('loss', 'params')['ohem_minkeep'])
-        weight = None
-        if self.configer.exists('loss', 'params') and 'ce_weight' in self.configer.get('loss', 'params'):
-            weight = self.configer.get('loss', 'params')['ce_weight']
-            weight = torch.FloatTensor(weight).cuda()
+# class FSOhemCELoss(nn.Module):
+#     def __init__(self, configer):
+#         super(FSOhemCELoss, self).__init__()
+#         self.configer = configer
+#         self.thresh = self.configer.get('loss', 'params')['ohem_thresh']
+#         self.min_kept = max(1, self.configer.get('loss', 'params')['ohem_minkeep'])
+#         weight = None
+#         if self.configer.exists('loss', 'params') and 'ce_weight' in self.configer.get('loss', 'params'):
+#             weight = self.configer.get('loss', 'params')['ce_weight']
+#             weight = torch.FloatTensor(weight).cuda()
 
-        self.reduction = 'mean'
-        if self.configer.exists('loss', 'params') and 'ce_reduction' in self.configer.get('loss', 'params'):
-            self.reduction = self.configer.get('loss', 'params')['ce_reduction']
+#         self.reduction = 'mean'
+#         if self.configer.exists('loss', 'params') and 'ce_reduction' in self.configer.get('loss', 'params'):
+#             self.reduction = self.configer.get('loss', 'params')['ce_reduction']
 
-        ignore_index = -1
-        if self.configer.exists('loss', 'params') and 'ce_ignore_index' in self.configer.get('loss', 'params'):
-            ignore_index = self.configer.get('loss', 'params')['ce_ignore_index']
+#         ignore_index = -1
+#         if self.configer.exists('loss', 'params') and 'ce_ignore_index' in self.configer.get('loss', 'params'):
+#             ignore_index = self.configer.get('loss', 'params')['ce_ignore_index']
 
-        self.ignore_label = ignore_index
-        self.ce_loss = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index, reduction='none')
+#         self.ignore_label = ignore_index
+#         self.ce_loss = nn.CrossEntropyLoss(weight=weight, ignore_index=ignore_index, reduction='none')
 
-    def forward(self, predict, target, **kwargs):
-        """
-            Args:
-                predict:(n, c, h, w)
-                target:(n, h, w)
-                weight (Tensor, optional): a manual rescaling weight given to each class.
-                                           If given, has to be a Tensor of size "nclasses"
-        """
-        prob_out = F.softmax(predict, dim=1)
-        tmp_target = target.clone()
-        tmp_target[tmp_target == self.ignore_label] = 0
-        prob = prob_out.gather(1, tmp_target.unsqueeze(1))
-        mask = target.contiguous().view(-1, ) != self.ignore_label
-        sort_prob, sort_indices = prob.contiguous().view(-1, )[mask].contiguous().sort()
-        min_threshold = sort_prob[min(self.min_kept, sort_prob.numel() - 1)]
-        threshold = max(min_threshold, self.thresh)
-        loss_matirx = self.ce_loss(predict, target).contiguous().view(-1, )
-        sort_loss_matirx = loss_matirx[mask][sort_indices]
-        select_loss_matrix = sort_loss_matirx[sort_prob < threshold]
-        if self.reduction == 'sum':
-            return select_loss_matrix.sum()
-        elif self.reduction == 'mean':
-            return select_loss_matrix.mean()
-        else:
-            raise NotImplementedError('Reduction Error!')
-
-
-class FSAuxOhemCELoss(nn.Module):
-    def __init__(self, configer=None):
-        super(FSAuxOhemCELoss, self).__init__()
-        self.configer = configer
-        self.ce_loss = FSCELoss(self.configer)
-        if self.configer.get('loss', 'loss_type') == 'fs_auxohemce_loss':
-            self.ohem_ce_loss = FSOhemCELoss(self.configer)
-        else:
-            assert self.configer.get('loss', 'loss_type') == 'fs_auxslowohemce_loss'
-            self.ohem_ce_loss = FSSlowOhemCELoss(self.configer)
-
-    def forward(self, inputs, targets, **kwargs):
-        aux_out, seg_out = inputs
-        seg_loss = self.ohem_ce_loss(seg_out, targets)
-        aux_loss = self.ce_loss(aux_out, targets)
-        loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
-        loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
-        return loss
-
-
-class FSAuxCELossDSN(nn.Module):
-    def __init__(self, configer=None):
-        super(FSAuxCELossDSN, self).__init__()
-        self.configer = configer
-        self.ce_loss = FSCELoss(self.configer)
-
-    def forward(self, inputs, targets, **kwargs):
-        aux1, aux2, aux3, seg_out = inputs
-        seg_loss = self.ce_loss(seg_out, targets)
-        aux1_loss = self.ce_loss(aux1, targets)
-        aux2_loss = self.ce_loss(aux2, targets)
-        aux3_loss = self.ce_loss(aux3, targets)
-        loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
-        loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * (aux1_loss + aux2_loss + aux3_loss) / 3
-        return loss
+#     def forward(self, predict, target, **kwargs):
+#         """
+#             Args:
+#                 predict:(n, c, h, w)
+#                 target:(n, h, w)
+#                 weight (Tensor, optional): a manual rescaling weight given to each class.
+#                                            If given, has to be a Tensor of size "nclasses"
+#         """
+#         prob_out = F.softmax(predict, dim=1)
+#         tmp_target = target.clone()
+#         tmp_target[tmp_target == self.ignore_label] = 0
+#         prob = prob_out.gather(1, tmp_target.unsqueeze(1))
+#         mask = target.contiguous().view(-1, ) != self.ignore_label
+#         sort_prob, sort_indices = prob.contiguous().view(-1, )[mask].contiguous().sort()
+#         min_threshold = sort_prob[min(self.min_kept, sort_prob.numel() - 1)]
+#         threshold = max(min_threshold, self.thresh)
+#         loss_matirx = self.ce_loss(predict, target).contiguous().view(-1, )
+#         sort_loss_matirx = loss_matirx[mask][sort_indices]
+#         select_loss_matrix = sort_loss_matirx[sort_prob < threshold]
+#         if self.reduction == 'sum':
+#             return select_loss_matrix.sum()
+#         elif self.reduction == 'mean':
+#             return select_loss_matrix.mean()
+#         else:
+#             raise NotImplementedError('Reduction Error!')
 
 
 class FSAuxCELoss(nn.Module):
@@ -309,7 +270,7 @@ class FSAuxCELoss(nn.Module):
         seg_loss = self.ce_loss(seg_out, targets)
         aux_loss = self.ce_loss(aux_out, targets)
         loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
-        loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
+        loss += self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
         return loss
 
 
@@ -325,7 +286,7 @@ class FSAuxRMILoss(nn.Module):
         aux_loss = self.ce_loss(aux_out, targets)
         seg_loss = self.rmi_loss(seg_out, targets)
         loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
-        loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
+        loss += self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
         return loss
 
 
@@ -345,7 +306,7 @@ class MSFSAuxRMILoss(nn.Module):
         aux_loss = self.ce_loss(aux_out, targets)
         seg_loss = self.rmi_loss(seg_out, targets)
         loss = self.configer.get('network', 'loss_weights')['seg_loss'] * seg_loss
-        loss = loss + self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
+        loss += self.configer.get('network', 'loss_weights')['aux_loss'] * aux_loss
 
         scaled_pred_05x = torch.nn.functional.interpolate(pred_05x, size=(seg_out.size(2), seg_out.size(3)),
                                                           mode='bilinear', align_corners=False)

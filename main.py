@@ -167,7 +167,8 @@ if __name__ == "__main__":
     parser.add_argument('--distributed', action='store_true', dest='distributed', help='Use multi-processing training.')
     parser.add_argument('--use_ground_truth', action='store_true', dest='use_ground_truth', help='Use ground truth for training.')
 
-    parser.add_argument('REMAIN', nargs='*')
+    # parser.add_argument('REMAIN', nargs='*')
+    parser.add_argument("--local-rank", type=int)
 
     args_parser = parser.parse_args()
 
@@ -212,9 +213,6 @@ if __name__ == "__main__":
         elif configer.get('phase') == 'test':
             from segmentor.tester import Tester 
             model = Tester(configer)    
-        elif configer.get('phase') == 'test_offset':
-            from segmentor.tester_offset import Tester
-            model = Tester(configer)
     else:
         Log.error('Method: {} is not valid.'.format(configer.get('task')))
         exit(1)

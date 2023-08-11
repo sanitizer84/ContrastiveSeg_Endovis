@@ -15,9 +15,9 @@
 source ../../../../pytorch-1.7.1/bin/activate
 
 # copy data
-rsync -aP /cluster/work/cvl/tiazhou/data/CityscapesZIP/openseg.tar ${TMPDIR}/
-mkdir ${TMPDIR}/Cityscapes
-tar -xf ${TMPDIR}/openseg.tar -C ${TMPDIR}/Cityscapes
+rsync -aP /cluster/work/cvl/tiazhou/data/cityscapesZIP/openseg.tar ${TMPDIR}/
+mkdir ${TMPDIR}/cityscapes
+tar -xf ${TMPDIR}/openseg.tar -C ${TMPDIR}/cityscapes
 
 # copy assets
 rsync -aP /cluster/work/cvl/tiazhou/assets/openseg/hrnetv2_w48_imagenet_pretrained.pth ${TMPDIR}/hrnetv2_w48_imagenet_pretrained.pth

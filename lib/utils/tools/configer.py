@@ -4,9 +4,9 @@
 # Configer class for all hyper parameters.
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+# from __future__ import absolute_import
+# from __future__ import division
+# from __future__ import print_function
 
 import argparse
 import json
@@ -49,8 +49,8 @@ class Configer(object):
                     self.add(key.split(':'), value)
                 elif value is not None:
                     self.update(key.split(':'), value)
-
-            self._handle_remaining_args(args_parser.REMAIN)
+            if self.exists('REMAIN'):
+                self._handle_remaining_args(args_parser.REMAIN)
 
         self.conditions = _ConditionHelper(self)
 
@@ -154,36 +154,25 @@ class Configer(object):
         prefix = '{}, {}'.format(filename, lineno)
         return prefix
 
+    # rewrite with the help of GPT, duhj
     def get(self, *key):
-        if len(key) == 0:
-            return self.params_root
-
-        elif len(key) == 1:
-            if key[0] in self.params_root:
-                return self.params_root[key[0]]
-            else:
-                Log.error('{} KeyError: {}.'.format(self._get_caller(), key))
-                exit(1)
-
-        elif len(key) == 2:
-            if key[0] in self.params_root and key[1] in self.params_root[key[0]]:
-                return self.params_root[key[0]][key[1]]
-            else:
-                Log.error('{} KeyError: {}.'.format(self._get_caller(), key))
-                exit(1)
-
-        else:
-            Log.error('{} KeyError: {}.'.format(self._get_caller(), key))
-            exit(1)
-
+        # len： 0-whole dict，1-dict depth 1，2-dict depth 2
+        if len(key) < 3:
+            current_level = self.params_root
+            for k in key:
+                if k in current_level:
+                    current_level = current_level[k]                    
+            return current_level
+        Log.error('{} KeyError: {}.'.format(self._get_caller(), key))
+        exit(1)
+    
     def exists(self, *key):
-        if len(key) == 1 and key[0] in self.params_root:
-            return True
-
-        if len(key) == 2 and (key[0] in self.params_root and key[1] in self.params_root[key[0]]):
-            return True
-
-        return False
+        if len(key) == 1:
+            return key[0] in self.params_root
+        elif len(key) == 2:
+            return key[0] in self.params_root and key[1] in self.params_root[key[0]]
+        else:
+            return False
 
     def add(self, key_tuple, value):
         if self.exists(*key_tuple):
@@ -299,7 +288,7 @@ class _ConditionHelper:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--configs', default='../../configs/cls/flower/fc_vgg19_flower_cls.json', type=str,
+    parser.add_argument('--configs', default='configs/cityscapes/H_48_D_4.json', type=str,
                         dest='configs', help='The file of the hyper parameters.')
     parser.add_argument('--phase', default='train', type=str,
                         dest='phase', help='The phase of Pose Estimator.')
@@ -321,3 +310,5 @@ if __name__ == '__main__':
     print (configer.get('network', 'resume'))
     print (configer.get('logging', 'log_file'))
     print(configer.get('data', 'train_dir'))
+    print (configer.get())
+    print(configer.get('data', 'train_dir', 'nan'))

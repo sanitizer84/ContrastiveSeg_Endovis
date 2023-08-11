@@ -92,7 +92,7 @@ class DataHelper:
 
     def _prepare_sequence(self, seq, force_list=False):
 
-        def split_and_cuda(lst: 'List[List[Tensor, len=N]]', device_ids) -> 'List[List[Tensor], len=N]':
+        def split_and_cuda(lst: 'List[List[Tensor, len=N]]', device_ids) -> 'List[List[Tensor], len=N]':    #type:ignore
             results = []
             for *items, d in zip(*lst, device_ids):
                 if len(items) == 1 and not force_list:

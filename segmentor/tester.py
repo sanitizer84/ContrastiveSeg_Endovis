@@ -8,23 +8,20 @@
 ## LICENSE file in the root directory of this source tree 
 ##+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
 import time
 import timeit
-import pdb
+# import pdb
 import cv2
-import scipy
+# import scipy
 import collections
-
 import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
+from scipy import ndimage
+from PIL import Image
+from math import ceil
 
 from lib.utils.helpers.file_helper import FileHelper
 from lib.utils.helpers.image_helper import ImageHelper
@@ -35,20 +32,14 @@ from lib.models.model_manager import ModelManager
 from lib.utils.tools.logger import Logger as Log
 from lib.metrics.running_score import RunningScore
 from lib.vis.seg_visualizer import SegVisualizer
-from lib.vis.palette import get_cityscapes_colors, get_ade_colors, get_lip_colors, get_camvid_colors
-from lib.vis.palette import get_pascal_context_colors, get_cocostuff_colors, get_pascal_voc_colors, get_autonue21_colors
+from lib.vis.palette import get_cityscapes_colors   
 from segmentor.tools.module_runner import ModuleRunner
 from segmentor.tools.optim_scheduler import OptimScheduler
-from scipy import ndimage
-from PIL import Image
-from math import ceil
+
 
 
 class Tester(object):
-    """
-      The class for Pose Estimation. Include train, val, val & predict.
-    """
-
+    # The class for Pose Estimation. Include train, val, val & predict.
     def __init__(self, configer):
         self.configer = configer
         self.batch_time = AverageMeter()
@@ -91,9 +82,7 @@ class Tester(object):
         return label_dst
 
     def test(self, data_loader=None):
-        """
-          Validation function during the train phase.
-        """
+        # Validation function during the train phase.
         self.seg_net.eval()
         start_time = time.time()
         image_id = 0
@@ -103,20 +92,16 @@ class Tester(object):
 
         if self.configer.get('dataset') in ['cityscapes', 'gta5', 'woodscape']:
             colors = get_cityscapes_colors()
-        elif self.configer.get('dataset') == 'ade20k':
-            colors = get_ade_colors()
-        elif self.configer.get('dataset') == 'lip':
-            colors = get_lip_colors()
-        elif self.configer.get('dataset') == 'pascal_context':
-            colors = get_pascal_context_colors()
-        elif self.configer.get('dataset') == 'pascal_voc':
-            colors = get_pascal_voc_colors()
-        elif self.configer.get('dataset') == 'coco_stuff':
-            colors = get_cocostuff_colors()
-        elif self.configer.get('dataset') == 'camvid':
-            colors = get_camvid_colors()
-        elif self.configer.get('dataset') == 'autonue21':
-            colors = get_autonue21_colors()
+        # elif self.configer.get('dataset') == 'ade20k':
+        #     colors = get_ade_colors()
+        # elif self.configer.get('dataset') == 'pascal_context':
+        #     colors = get_pascal_context_colors()
+        # elif self.configer.get('dataset') == 'pascal_voc':
+        #     colors = get_pascal_voc_colors()
+        # elif self.configer.get('dataset') == 'coco_stuff':
+        #     colors = get_cocostuff_colors()
+        # elif self.configer.get('dataset') == 'camvid':
+        #     colors = get_camvid_colors()
         else:
             raise RuntimeError("Unsupport colors")
 
@@ -160,11 +145,6 @@ class Tester(object):
                 elif self.configer.get('test', 'mode') == 'mscrop_test':
                     crop_size = self.configer.get('test', 'crop_size')
                     outputs = self.mscrop_test(inputs, crop_size)
-                elif self.configer.get('test', 'mode') == 'crf_ss_test':
-                    import pydensecrf.densecrf as dcrf
-                    import pydensecrf.utils as dcrf_utils
-                    outputs = self.ss_test(inputs)
-                    outputs = self.dense_crf_process(inputs, outputs)
 
                 if isinstance(outputs, torch.Tensor):
                     outputs = outputs.permute(0, 2, 3, 1).cpu().numpy()
@@ -531,49 +511,6 @@ class Tester(object):
         if total_length - cropped_starting[-1] > crop_length:
             cropped_starting.append(total_length - crop_length)  # must cover the total image
         return cropped_starting
-
-    def dense_crf_process(self, images, outputs):
-        '''
-        Reference: https://github.com/kazuto1011/deeplab-pytorch/blob/master/libs/utils/crf.py
-        '''
-        # hyperparameters of the dense crf 
-        # baseline = 79.5
-        # bi_xy_std = 67, 79.1
-        # bi_xy_std = 20, 79.6
-        # bi_xy_std = 10, 79.7
-        # bi_xy_std = 10, iter_max = 20, v4 79.7
-        # bi_xy_std = 10, iter_max = 5, v5 79.7
-        # bi_xy_std = 5, v3 79.7
-        iter_max = 10
-        pos_w = 3
-        pos_xy_std = 1
-        bi_w = 4
-        bi_xy_std = 10
-        bi_rgb_std = 3
-
-        b = images.size(0)
-        mean_vector = np.expand_dims(np.expand_dims(np.transpose(np.array([102.9801, 115.9465, 122.7717])), axis=1),
-                                     axis=2)
-        outputs = F.softmax(outputs, dim=1)
-        for i in range(b):
-            unary = outputs[i].data.cpu().numpy()
-            C, H, W = unary.shape
-            unary = dcrf_utils.unary_from_softmax(unary)
-            unary = np.ascontiguousarray(unary)
-
-            image = np.ascontiguousarray(images[i]) + mean_vector
-            image = image.astype(np.ubyte)
-            image = np.ascontiguousarray(image.transpose(1, 2, 0))
-
-            d = dcrf.DenseCRF2D(W, H, C)
-            d.setUnaryEnergy(unary)
-            d.addPairwiseGaussian(sxy=pos_xy_std, compat=pos_w)
-            d.addPairwiseBilateral(sxy=bi_xy_std, srgb=bi_rgb_std, rgbim=image, compat=bi_w)
-            out_crf = np.array(d.inference(iter_max))
-            outputs[i] = torch.from_numpy(out_crf).cuda().view(C, H, W)
-
-        return outputs
-
 
 if __name__ == "__main__":
     pass

@@ -8,13 +8,7 @@
 ## LICENSE file in the root directory of this source tree 
 ##+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-from lib.loss.loss_helper import FSAuxOhemCELoss, FSOhemCELoss, FSRMILoss
-from lib.loss.loss_helper import FSCELoss, FSAuxCELoss, FSAuxRMILoss, FSCELOVASZLoss, MSFSAuxRMILoss, FSAuxCELossDSN
+from lib.loss.loss_helper import FSRMILoss, FSCELoss, FSAuxCELoss, FSAuxRMILoss, FSCELOVASZLoss, MSFSAuxRMILoss
 from lib.loss.loss_helper import SegFixLoss
 from lib.loss.rmi_loss import RMILoss
 from lib.loss.loss_contrast import ContrastAuxCELoss, ContrastCELoss
@@ -25,20 +19,18 @@ from lib.utils.distributed import is_distributed
 
 
 SEG_LOSS_DICT = {
-    'fs_ce_loss': FSCELoss,
-    'fs_ohemce_loss': FSOhemCELoss,
-    'fs_auxce_loss': FSAuxCELoss,
-    'fs_aux_rmi_loss': FSAuxRMILoss,
-    'fs_auxohemce_loss': FSAuxOhemCELoss,
-    'segfix_loss': SegFixLoss,
-    'rmi_loss': RMILoss,
-    'fs_rmi_loss': FSRMILoss,
-    'contrast_auxce_loss': ContrastAuxCELoss,
-    'contrast_ce_loss': ContrastCELoss,
-    'fs_ce_lovasz_loss': FSCELOVASZLoss,
-    'ms_fs_aux_rmi_loss': MSFSAuxRMILoss,
-    'fs_auxce_dsn_loss': FSAuxCELossDSN,
-    'mem_contrast_ce_loss': MemContrastCELoss
+    'contrast_auxce_loss':  ContrastAuxCELoss,
+    'contrast_ce_loss':     ContrastCELoss,
+    'mem_contrast_ce_loss': MemContrastCELoss,
+    
+    'fs_ce_loss':           FSCELoss,
+    'fs_auxce_loss':        FSAuxCELoss,
+    'fs_aux_rmi_loss':      FSAuxRMILoss,
+    'segfix_loss':          SegFixLoss,
+    'rmi_loss':             RMILoss,
+    'fs_rmi_loss':          FSRMILoss,
+    'fs_ce_lovasz_loss':    FSCELOVASZLoss,
+    'ms_fs_aux_rmi_loss':   MSFSAuxRMILoss,
 }
 
 
@@ -60,11 +52,14 @@ class LossManager(object):
 
     def get_seg_loss(self, loss_type=None):
         key = self.configer.get('loss', 'loss_type') if loss_type is None else loss_type
-        if key not in SEG_LOSS_DICT:
-            Log.error('Loss: {} not valid!'.format(key))
-            exit(1)
-        Log.info('use loss: {}.'.format(key))
-        loss = SEG_LOSS_DICT[key](self.configer)
-        return self._parallel(loss)
+        if key in SEG_LOSS_DICT:
+            Log.info('use loss: {}.'.format(key))
+            loss = SEG_LOSS_DICT[key](self.configer)
+            return self._parallel(loss)
+        Log.error('Loss: {} not valid!'.format(key))
+        exit(1)
+        
+        
+        
 
 

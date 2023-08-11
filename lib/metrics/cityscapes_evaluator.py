@@ -2,11 +2,8 @@
 #-*- coding:utf-8 -*-
 # Author: Donny You(youansheng@gmail.com)
 # Evaluation of cityscapes.
-
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+import sys
+sys.path.append("../../..")
 
 import argparse
 import fnmatch
@@ -31,10 +28,10 @@ CSUPPORT = True
 # Check if C-Support is available for better performance
 if CSUPPORT:
     try:
-        import lib.metrics.cityscapes.evaluation.addToConfusionMatrix as addToConfusionMatrix
+        import lib.metrics.cityscapes.evaluation.addToConfusionMatrix as addToConfusionMatrix   #type:ignore
     except:
         CSUPPORT = False
-
+        print('CSUPPORT: Not')
 
 # A class to collect all bunch of data
 class CArgs(object):
@@ -696,8 +693,7 @@ class CityscapesEvaluator(object):
 
 
 if __name__ == '__main__':
-    # python cityscapes_evaluator.py --gt_dir ~/DataSet/CityScape/gtFine/val
-    #                               --pred_dir ~/Projects/PyTorchCV/val/results/seg/cityscapes/test_dir/image/label
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--gt_dir', default=None, type=str,
                         dest='gt_dir', help='The directory of ground truth.')

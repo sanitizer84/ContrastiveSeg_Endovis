@@ -8,24 +8,18 @@
 ## LICENSE file in the root directory of this source tree 
 ##+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pdb
 import torch
 from torch.utils import data
 
 import lib.datasets.tools.transforms as trans
-import lib.datasets.tools.cv2_aug_transforms as cv2_aug_trans
-import lib.datasets.tools.pil_aug_transforms as pil_aug_trans
+# import lib.datasets.tools.cv2_aug_transforms as cv2_aug_trans
+# import lib.datasets.tools.pil_aug_transforms as pil_aug_trans
 from lib.datasets.loader.default_loader import DefaultLoader, CSDataTestLoader
-from lib.datasets.loader.ade20k_loader import ADE20KLoader
-from lib.datasets.loader.lip_loader import LipLoader
-from lib.datasets.loader.offset_loader import DTOffsetLoader
+# from lib.datasets.loader.lip_loader import LipLoader
+# from lib.datasets.loader.offset_loader import DTOffsetLoader
 from lib.datasets.tools.collate import collate
 from lib.utils.tools.logger import Logger as Log
-
 from lib.utils.distributed import get_world_size, get_rank, is_distributed
 
 
@@ -95,42 +89,7 @@ class DataLoader(object):
         return loader, sampler
 
     def get_trainloader(self):
-        if self.configer.exists('data', 'use_edge') and self.configer.get('data', 'use_edge') == 'ce2p':
-            """
-            ce2p manner:
-            load both the ground-truth label and edge.
-            """
-            Log.info('use edge (follow ce2p) for train...')
-            klass = LipLoader
-
-        elif self.configer.exists('data', 'use_dt_offset') or self.configer.exists('data', 'pred_dt_offset'):
-            """
-            dt-offset manner:
-            load both the ground-truth label and offset (based on distance transform).
-            """
-            Log.info('use distance transform offset loader for train...')
-            klass = DTOffsetLoader
-
-        elif self.configer.exists('train', 'loader') and \
-                (self.configer.get('train', 'loader') == 'ade20k'
-                 or self.configer.get('train', 'loader') == 'pascal_context'
-                 or self.configer.get('train', 'loader') == 'pascal_voc'
-                 or self.configer.get('train', 'loader') == 'coco_stuff'
-                 or self.configer.get('train', 'loader') == 'camvid'):
-            """
-            ADE20KLoader manner:
-            support input images of different shapes.
-            """
-            Log.info('use ADE20KLoader (diverse input shape) for train...')
-            klass = ADE20KLoader
-        else:
-            """
-            Default manner:
-            + support input images of the same shapes.
-            + support distributed training (the performance is more un-stable than non-distributed manner)
-            """
-            Log.info('use the DefaultLoader for train...')
-            klass = DefaultLoader
+        klass = DefaultLoader    
         loader, sampler = self.get_dataloader_sampler(klass, 'train', 'train')
         trainloader = data.DataLoader(
             loader,
@@ -148,15 +107,16 @@ class DataLoader(object):
     def get_valloader(self, dataset=None):
         dataset = 'val' if dataset is None else dataset
 
-        if self.configer.exists('data', 'use_dt_offset') or self.configer.exists('data', 'pred_dt_offset'):
-            """
-            dt-offset manner:
-            load both the ground-truth label and offset (based on distance transform).
-            """
-            Log.info('use distance transform based offset loader for val ...')
-            klass = DTOffsetLoader
+        # if self.configer.exists('data', 'use_dt_offset') or self.configer.exists('data', 'pred_dt_offset'):
+        #     """
+        #     dt-offset manner:
+        #     load both the ground-truth label and offset (based on distance transform).
+        #     """
+        #     Log.info('use distance transform based offset loader for val ...')
+        #     klass = DTOffsetLoader
 
-        elif self.configer.get('method') == 'fcn_segmentor':
+        # elif self.configer.get('method') == 'fcn_segmentor':
+        if self.configer.get('method') == 'fcn_segmentor':
             """
             default manner:
             load the ground-truth label.
@@ -181,23 +141,23 @@ class DataLoader(object):
 
     def get_testloader(self, dataset=None):
         dataset = 'test' if dataset is None else dataset
-        if self.configer.exists('data', 'use_sw_offset') or self.configer.exists('data', 'pred_sw_offset'):
-            Log.info('use sliding window based offset loader for test ...')
-            test_loader = data.DataLoader(
-                SWOffsetTestLoader(root_dir=self.configer.get('data', 'data_dir'), dataset=dataset,
-                                   img_transform=self.img_transform,
-                                   configer=self.configer),
-                batch_size=self.configer.get('test', 'batch_size'), pin_memory=True,
-                num_workers=self.configer.get('data', 'workers'), shuffle=False,
-                collate_fn=lambda *args: collate(
-                    *args, trans_dict=self.configer.get('test', 'data_transformer')
-                )
-            )
-            return test_loader
+        # if self.configer.exists('data', 'use_sw_offset') or self.configer.exists('data', 'pred_sw_offset'):
+        #     Log.info('use sliding window based offset loader for test ...')
+        #     test_loader = data.DataLoader(
+        #         SWOffsetTestLoader(root_dir=self.configer.get('data', 'data_dir'), dataset=dataset,
+        #                            img_transform=self.img_transform,
+        #                            configer=self.configer),
+        #         batch_size=self.configer.get('test', 'batch_size'), pin_memory=True,
+        #         num_workers=self.configer.get('data', 'workers'), shuffle=False,
+        #         collate_fn=lambda *args: collate(
+        #             *args, trans_dict=self.configer.get('test', 'data_transformer')
+        #         )
+        #     )
+        #     return test_loader
 
-        elif self.configer.get('method') == 'fcn_segmentor':
+        # elif self.configer.get('method') == 'fcn_segmentor':
+        if self.configer.get('method') == 'fcn_segmentor':
             Log.info('use CSDataTestLoader for test ...')
-
             root_dir = self.configer.get('data', 'data_dir')
             if isinstance(root_dir, list) and len(root_dir) == 1:
                 root_dir = root_dir[0]

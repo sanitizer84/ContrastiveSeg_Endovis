@@ -8,8 +8,6 @@
 ## LICENSE file in the root directory of this source tree 
 ##+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-import os
-import pdb
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -22,10 +20,7 @@ from lib.models.modules.hanet_attention import HANet_Conv
 
 
 class HRNet_W48(nn.Module):
-    """
-    deep high-resolution representation learning for human pose estimation, CVPR2019
-    """
-
+    # deep high-resolution representation learning for human pose estimation, CVPR2019
     def __init__(self, configer):
         super(HRNet_W48, self).__init__()
         self.configer = configer
@@ -57,10 +52,6 @@ class HRNet_W48(nn.Module):
 
 
 class HRNet_W48_CONTRAST(nn.Module):
-    """
-    deep high-resolution representation learning for human pose estimation, CVPR2019
-    """
-
     def __init__(self, configer):
         super(HRNet_W48_CONTRAST, self).__init__()
         self.configer = configer
@@ -297,69 +288,3 @@ class HRNet_W48_OCR_B(nn.Module):
         out = F.interpolate(out, size=(x_.size(2), x_.size(3)), mode="bilinear", align_corners=True)
         return out_aux, out
 
-
-class HRNet_W48_OCR_B_HA(nn.Module):
-    """
-    Considering that the 3x3 convolution on the 4x resolution feature map is expensive,
-    we can decrease the intermediate channels from 512 to 256 w/o performance loss.
-    """
-
-    def __init__(self, configer):
-        super(HRNet_W48_OCR_B_HA, self).__init__()
-        self.configer = configer
-        self.num_classes = self.configer.get('data', 'num_classes')
-        self.backbone = BackboneSelector(configer).get_backbone()
-
-        in_channels = 720  # 48 + 96 + 192 + 384
-        self.conv3x3 = nn.Sequential(
-            nn.Conv2d(in_channels, 256, kernel_size=3, stride=1, padding=1),
-            ModuleHelper.BNReLU(256, bn_type=self.configer.get('network', 'bn_type')),
-        )
-        from lib.models.modules.spatial_ocr_block import SpatialGather_Module
-        self.ocr_gather_head = SpatialGather_Module(self.num_classes)
-        from lib.models.modules.spatial_ocr_block import SpatialOCR_Module
-        self.ocr_distri_head = SpatialOCR_Module(in_channels=256,
-                                                 key_channels=128,
-                                                 out_channels=256,
-                                                 scale=1,
-                                                 dropout=0.05,
-                                                 bn_type=self.configer.get('network', 'bn_type'))
-        self.cls_head = nn.Conv2d(256, self.num_classes, kernel_size=1, stride=1, padding=0, bias=True)
-        self.aux_head = nn.Sequential(
-            nn.Conv2d(in_channels, 256, kernel_size=3, stride=1, padding=1),
-            ModuleHelper.BNReLU(256, bn_type=self.configer.get('network', 'bn_type')),
-            nn.Conv2d(256, self.num_classes, kernel_size=1, stride=1, padding=0, bias=True)
-        )
-
-        self.ha1 = HANet_Conv(384, 384, bn_type=self.configer.get('network', 'bn_type'))
-        self.ha2 = HANet_Conv(192, 192, bn_type=self.configer.get('network', 'bn_type'))
-        self.ha3 = HANet_Conv(96, 96, bn_type=self.configer.get('network', 'bn_type'))
-        self.ha4 = HANet_Conv(48, 48, bn_type=self.configer.get('network', 'bn_type'))
-
-    def forward(self, x_):
-        x = self.backbone(x_)
-        _, _, h, w = x[0].size()
-
-        x[0] = x[0] + self.ha1(x[0])
-        x[1] = x[1] + self.ha1(x[1])
-        x[2] = x[2] + self.ha1(x[2])
-        x[3] = x[3] + self.ha1(x[3])
-
-        feat1 = x[0]
-        feat2 = F.interpolate(x[1], size=(h, w), mode="bilinear", align_corners=True)
-        feat3 = F.interpolate(x[2], size=(h, w), mode="bilinear", align_corners=True)
-        feat4 = F.interpolate(x[3], size=(h, w), mode="bilinear", align_corners=True)
-
-        feats = torch.cat([feat1, feat2, feat3, feat4], 1)
-        out_aux = self.aux_head(feats)
-
-        feats = self.conv3x3(feats)
-
-        context = self.ocr_gather_head(feats, out_aux)
-        feats = self.ocr_distri_head(feats, context)
-
-        out = self.cls_head(feats)
-
-        out_aux = F.interpolate(out_aux, size=(x_.size(2), x_.size(3)), mode="bilinear", align_corners=True)
-        out = F.interpolate(out, size=(x_.size(2), x_.size(3)), mode="bilinear", align_corners=True)
-        return out_aux, out

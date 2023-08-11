@@ -3,9 +3,7 @@
 # Author: Donny You (youansheng@gmail.com)
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
 
 import functools
 import os
@@ -67,7 +65,7 @@ class ModuleHelper(object):
                 from lib.extensions.inplace_abn_1.bn import InPlaceABNSync
                 return InPlaceABNSync(num_features, **kwargs)
             elif torch_ver == '1.2':
-                from inplace_abn import InPlaceABNSync
+                from lib.extensions.inplace_abn.bn import InPlaceABNSync
                 return InPlaceABNSync(num_features, **kwargs)
 
         else:
@@ -94,39 +92,24 @@ class ModuleHelper(object):
             return functools.partial(nn.GroupNorm, num_groups=32)
 
         elif bn_type == 'inplace_abn':
-            torch_ver = torch.__version__[:3]
-            if torch_ver == '0.4':
-                from lib.extensions.inplace_abn.bn import InPlaceABNSync
-                if ret_cls:
-                    return InPlaceABNSync
-
-                return functools.partial(InPlaceABNSync, activation='none')
-
-            elif torch_ver in ('1.0', '1.1'):
-                from lib.extensions.inplace_abn_1.bn import InPlaceABNSync
-                if ret_cls:
-                    return InPlaceABNSync
-
-                return functools.partial(InPlaceABNSync, activation='none')
-
-            elif torch_ver == '1.2':
-                from inplace_abn import InPlaceABNSync
-                if ret_cls:
-                    return InPlaceABNSync
-
-                return functools.partial(InPlaceABNSync, activation='identity')
+            from lib.extensions.inplace_abn import InPlaceABNSync
+            if ret_cls:
+                return InPlaceABNSync
+            return functools.partial(InPlaceABNSync, activation='identity')
 
         else:
             Log.error('Not support BN type: {}.'.format(bn_type))
             exit(1)
 
     @staticmethod
-    def load_model(model, pretrained=None, all_match=True, network='resnet101'):
+    # def load_model(model, pretrained=None, all_match=True, network='resnet101'):
+    def load_model(model, pretrained=None, network='resnet101'):
         if pretrained is None:
             return model
-
-        if all_match:
-            Log.info('Loading pretrained model:{}'.format(pretrained))
+        
+        Log.info('Loading pretrained model:{}'.format(pretrained))      
+        try:
+            # Parameters fully match
             pretrained_dict = torch.load(pretrained, map_location=lambda storage, loc: storage)
             model_dict = model.state_dict()
             load_dict = dict()
@@ -137,22 +120,16 @@ class ModuleHelper(object):
                     load_dict[k] = v
             model.load_state_dict(load_dict)
 
-        else:
-            Log.info('Loading pretrained model:{}'.format(pretrained))
+        except:
+            # Parameters not fully match
             pretrained_dict = torch.load(pretrained, map_location=lambda storage, loc: storage)
 
-            # settings for "wide_resnet38"  or network == "resnet152"
             if network == "wide_resnet":
                 pretrained_dict = pretrained_dict['state_dict']
 
             model_dict = model.state_dict()
 
-            if network == "hrnet_plus":
-                # pretrained_dict['conv1_full_res.weight'] = pretrained_dict['conv1.weight']
-                # pretrained_dict['conv2_full_res.weight'] = pretrained_dict['conv2.weight']
-                load_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys()}
-
-            elif network == 'pvt':
+            if  network == 'pvt':
                 pretrained_dict = {k: v for k, v in pretrained_dict.items() if
                                    k in model_dict.keys()}
                 pretrained_dict['pos_embed1'] = \
@@ -170,35 +147,6 @@ class ModuleHelper(object):
                 pretrained_dict['pos_embed5'] = \
                     interpolate(pretrained_dict['pos_embed3'].unsqueeze(dim=0), size=[1024, 320])[0]
                 load_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys()}
-
-            elif network == 'pcpvt' or network == 'svt':
-                load_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys()}
-                Log.info('Missing keys: {}'.format(list(set(model_dict) - set(load_dict))))
-
-            elif network == 'transunet_swin':
-                pretrained_dict = {k: v for k, v in pretrained_dict.items() if
-                                   k in model_dict.keys()}
-                for item in list(pretrained_dict.keys()):
-                    if item.startswith('layers.0') and not item.startswith('layers.0.downsample'):
-                        pretrained_dict['dec_layers.2' + item[15:]] = pretrained_dict[item]
-                    if item.startswith('layers.1') and not item.startswith('layers.1.downsample'):
-                        pretrained_dict['dec_layers.1' + item[15:]] = pretrained_dict[item]
-                    if item.startswith('layers.2') and not item.startswith('layers.2.downsample'):
-                        pretrained_dict['dec_layers.0' + item[15:]] = pretrained_dict[item]
-
-                for item in list(pretrained_dict.keys()):
-                    if 'relative_position_index' in item:
-                        pretrained_dict[item] = \
-                            interpolate(pretrained_dict[item].unsqueeze(dim=0).unsqueeze(dim=0).float(),
-                                        size=[256, 256])[0][0]
-                    if 'relative_position_bias_table' in item:
-                        pretrained_dict[item] = \
-                            interpolate(pretrained_dict[item].unsqueeze(dim=0).unsqueeze(dim=0).float(),
-                                        size=[961, pretrained_dict[item].size(1)])[0][0]
-                    if 'attn_mask' in item:
-                        pretrained_dict[item] = \
-                            interpolate(pretrained_dict[item].unsqueeze(dim=0).unsqueeze(dim=0).float(),
-                                        size=[pretrained_dict[item].size(0), 256, 256])[0][0]
 
             elif network == "hrnet" or network == "xception" or network == 'resnest':
                 load_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys()}

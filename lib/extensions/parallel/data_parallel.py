@@ -44,7 +44,9 @@ class DataParallelModel(DataParallel):
     splitting the input across the specified devices by chunking in the
     batch dimension.
     In the forward pass, the module is replicated on each device,
-    and each replica handles a portion of the input. During the backwards pass, gradients from each replica are summed into the original module.
+    and each replica handles a portion of the input. During the backwards
+    pass, gradients from each replica are summed into the original module.
+    
     Note that the outputs are not gathered, please use compatible
     :class:`encoding.parallel.DataParallelCriterion`.
 

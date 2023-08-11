@@ -4,7 +4,7 @@ cd $SCRIPTPATH
 cd ../../../
 . config.profile
 # check the enviroment info
-nvidia-smi${PYTHON} -m pip install yacs
+#nvidia-smi${PYTHON} -m pip install yacs
 
 export PYTHONPATH="$PWD":$PYTHONPATH
 

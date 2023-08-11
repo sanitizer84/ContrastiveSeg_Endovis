@@ -7,7 +7,7 @@ DATA_ROOT=$3
 SCRATCH_ROOT=$4
 ASSET_ROOT=${DATA_ROOT}
 
-DATA_DIR="${DATA_ROOT}/Cityscapes"
+DATA_DIR="${DATA_ROOT}/cityscapes"
 SAVE_DIR="${SCRATCH_ROOT}/seg_results/cityscapes"
 BACKBONE="hrnet48"
 
@@ -16,9 +16,9 @@ CONFIGS_TEST="configs/cityscapes/H_48_D_4_TEST.json"
 
 MODEL_NAME="hrnet_w48_mem"
 LOSS_TYPE="mem_contrast_ce_loss"
-CHECKPOINTS_ROOT="${SCRATCH_ROOT}/Cityscapes/"
+CHECKPOINTS_ROOT="${SCRATCH_ROOT}/cityscapes/"
 CHECKPOINTS_NAME="${MODEL_NAME}_paddle_lr2x_"$2
-LOG_FILE="${SCRATCH_ROOT}/logs/Cityscapes/${CHECKPOINTS_NAME}.log"
+LOG_FILE="${SCRATCH_ROOT}/logs/cityscapes/${CHECKPOINTS_NAME}.log"
 echo "Logging to $LOG_FILE"
 mkdir -p `dirname $LOG_FILE`
 

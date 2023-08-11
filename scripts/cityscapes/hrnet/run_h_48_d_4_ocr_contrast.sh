@@ -7,8 +7,8 @@ DATA_ROOT=$3
 SCRATCH_ROOT=$4
 ASSET_ROOT=${DATA_ROOT}
 
-DATA_DIR="${DATA_ROOT}/Cityscapes"
-SAVE_DIR="${SCRATCH_ROOT}/Cityscapes/seg_results/"
+DATA_DIR="${DATA_ROOT}/cityscapes"
+SAVE_DIR="${SCRATCH_ROOT}/cityscapes/seg_results/"
 BACKBONE="hrnet48"
 
 CONFIGS="configs/cityscapes/H_48_D_4.json"
@@ -16,9 +16,9 @@ CONFIGS_TEST="configs/cityscapes/H_48_D_4_TEST.json"
 
 MODEL_NAME="hrnet_w48_ocr_contrast"
 LOSS_TYPE="contrast_auxce_loss"
-CHECKPOINTS_ROOT="${SCRATCH_ROOT}/Cityscapes/"
+CHECKPOINTS_ROOT="${SCRATCH_ROOT}/cityscapes/"
 CHECKPOINTS_NAME="${MODEL_NAME}_lr1x_"$2
-LOG_FILE="${SCRATCH_ROOT}/logs/Cityscapes/${CHECKPOINTS_NAME}.log"
+LOG_FILE="${SCRATCH_ROOT}/logs/cityscapes/${CHECKPOINTS_NAME}.log"
 echo "Logging to $LOG_FILE"
 mkdir -p `dirname $LOG_FILE`
 

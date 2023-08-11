@@ -9,9 +9,7 @@
 ##+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
 
 import os
 import pdb
@@ -112,12 +110,6 @@ class DefaultLoader(data.Dataset):
         image_dir = os.path.join(root_dir, dataset, 'image')
         label_dir = os.path.join(root_dir, dataset, 'label')
 
-        # only change the ground-truth labels of training set
-        if self.configer.exists('data', 'label_edge2void'):
-            label_dir = os.path.join(root_dir, dataset, 'label_edge_void')
-        elif self.configer.exists('data', 'label_non_edge2void'):
-            label_dir = os.path.join(root_dir, dataset, 'label_non_edge_void')
-
         img_extension = os.listdir(image_dir)[0].split('.')[-1]
 
         # support the argument to pass the file list used for training/testing
@@ -154,11 +146,6 @@ class DefaultLoader(data.Dataset):
                 img_list.clear()
                 label_list.clear()
                 name_list.clear()              
-
-            if self.configer.exists('data', 'label_edge2void'):
-                label_dir = os.path.join(root_dir, 'val/label_edge_void')
-            elif self.configer.exists('data', 'label_non_edge2void'):
-                label_dir = os.path.join(root_dir, 'val/label_non_edge_void')
 
             if file_list_txt is None:
                 files = sorted(os.listdir(image_dir))
@@ -295,8 +282,7 @@ class CSDataTestLoader(data.Dataset):
         image_dir = os.path.join(root_dir, dataset)
         img_extension = os.listdir(image_dir)[0].split('.')[-1]
 
-        if self.configer.get('dataset') == 'cityscapes' or self.configer.get('dataset') == 'camvid' or \
-                self.configer.get('dataset') == 'autonue21':
+        if self.configer.get('dataset') == 'cityscapes' or self.configer.get('dataset') == 'camvid':
             for item in os.listdir(image_dir):
                 sub_image_dir = os.path.join(image_dir, item)
                 for file_name in os.listdir(sub_image_dir):

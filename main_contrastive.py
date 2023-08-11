@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import os
 import time
@@ -37,7 +34,7 @@ if __name__ == "__main__":
                         dest='gpu', help='The gpu list used.')
 
     # ***********  Params for data.  **********
-    parser.add_argument('--data_dir', default="/home/duhj/datasets/cityscapes", type=str, nargs='+',
+    parser.add_argument('--data_dir', default="/tmp/cityscapes", type=str, nargs='+',
                         dest='data:data_dir', help='The Directory of the data.')
     parser.add_argument('--include_val', type=str2bool, nargs='?', default=False,
                         dest='data:include_val', help='Include validation set for training.')
@@ -65,9 +62,9 @@ if __name__ == "__main__":
                         dest='val:batch_size', help='The batch size of validation.')
 
     # ***********  Params for checkpoint.  **********
-    parser.add_argument('--checkpoints_root', default="./checkpoints/cityscapes", type=str,
+    parser.add_argument('--checkpoints_root', default="./", type=str,
                         dest='checkpoints:checkpoints_root', help='The root dir of model save path.')
-    parser.add_argument('--checkpoints_name', default="hrnet_w48_contrast_lr1x", type=str,
+    parser.add_argument('--checkpoints_name', default="hrnet_w48_contrast_lr1x1", type=str,
                         dest='checkpoints:checkpoints_name', help='The name of checkpoint model.')
     parser.add_argument('--save_iters', default=None, type=int,
                         dest='checkpoints:save_iters', help='The saving iters of checkpoint model.')
@@ -97,6 +94,8 @@ if __name__ == "__main__":
                         dest='network:resume_train', help='Whether to validate the training set  during resume.')
     parser.add_argument('--resume_eval_val', type=str2bool, nargs='?', default=True,
                         dest='network:resume_val', help='Whether to validate the val set during resume.')
+    
+    # gathered 似乎是指各gpu上的数据有没有汇总到一个变量，如果False则是一个列表？
     parser.add_argument('--gathered', type=str2bool, nargs='?', default=True,
                         dest='network:gathered', help='Whether to gather the output of model.')
     parser.add_argument('--loss_balance', type=str2bool, nargs='?', default=True,
@@ -121,7 +120,7 @@ if __name__ == "__main__":
     # ***********  Params for display.  **********
     parser.add_argument('--max_epoch', default=None, type=int,
                         dest='solver:max_epoch', help='The max epoch of training.')
-    parser.add_argument('--max_iters', default=100, type=int,
+    parser.add_argument('--max_iters', default=1000, type=int,
                         dest='solver:max_iters', help='The max iters of training.')
     parser.add_argument('--display_iter', default=None, type=int,
                         dest='solver:display_iter', help='The display iteration of train logs.')
@@ -157,10 +156,10 @@ if __name__ == "__main__":
     # ***********  Params for distributed training.  **********
     parser.add_argument('--local_rank', type=int, default=-1, dest='local_rank', help='local rank of current process')
     parser.add_argument('--distributed', action='store_true', dest='distributed', help='Use multi-processing training.')
-    # parser.add_argument('--distributed', type=str2bool, nargs='?', default=False, dest='distributed')
     parser.add_argument('--use_ground_truth', action='store_true', dest='use_ground_truth', help='Use ground truth for training.')
 
-    parser.add_argument('REMAIN', nargs='*')
+    # parser.add_argument('REMAIN', nargs='*')
+    parser.add_argument("--local-rank", type=int)
 
     args_parser = parser.parse_args()
 
@@ -204,20 +203,11 @@ if __name__ == "__main__":
         if configer.get('phase') == 'train':
             from segmentor.trainer_contrastive import Trainer
             model = Trainer(configer)
+            model.train()
         elif configer.get('phase') == 'test':
             from segmentor.tester import Tester 
             model = Tester(configer)    
-        elif configer.get('phase') == 'test_offset':
-            from segmentor.tester_offset import Tester
-            model = Tester(configer)
+            model.test()
     else:
-        Log.error('Method: {} is not valid.'.format(configer.get('task')))
-        exit(1)
-
-    if configer.get('phase') == 'train':
-        model.train()
-    elif configer.get('phase').startswith('test') and configer.get('network', 'resume') is not None:
-        model.test()
-    else:
-        Log.error('Phase: {} is not valid.'.format(configer.get('phase')))
+        Log.error('Method: {} is not valid.'.format(configer.get('method')))
         exit(1)

@@ -8,6 +8,7 @@ import time
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
+import torch.distributed as dist
 
 from lib.datasets.data_loader import DataLoader
 from lib.loss.loss_manager import LossManager
@@ -51,8 +52,10 @@ class Trainer(object):
         self._init_model()
 
     def _init_model(self):
-        self.seg_net = self.model_manager.semantic_segmentor()
-        self.seg_net = self.module_runner.load_net(self.seg_net)
+        
+        self.seg_net = self.module_runner.load_net(
+            self.model_manager.semantic_segmentor()
+        )
 
         Log.info('Params Group Method: {}'.format(self.configer.get('optim', 'group_method')))
         if self.configer.get('optim', 'group_method') == 'decay':
@@ -161,9 +164,21 @@ class Trainer(object):
         return params
 
     def __train(self):
-        """
-          Train function of every epoch during train phase.
-        """
+        
+        def reduce_tensor(inp):
+            """
+            Reduce the loss from all processes so that 
+            process with rank 0 has the averaged results.
+            """
+            world_size = get_world_size()
+            if world_size < 2:
+                return inp
+            with torch.no_grad():
+                reduced_inp = inp
+                dist.reduce(reduced_inp, dst=0)
+            return reduced_inp
+        
+        # Train function of every epoch during train phase.
         self.seg_net.train()
         self.pixel_loss.train()
         start_time = time.time()
@@ -172,25 +187,22 @@ class Trainer(object):
             normal_max_iters = int(self.configer.get('solver', 'max_iters') * 0.75)
             swa_step_max_iters = (self.configer.get('solver', 'max_iters') - normal_max_iters) // 5 + 1
 
-        if hasattr(self.train_loader.sampler, 'set_epoch'):
-            self.train_loader.sampler.set_epoch(self.configer.get('epoch'))
-
-        for i, data_dict in enumerate(self.train_loader):
+        for _, data_dict in enumerate(self.train_loader):
             if self.configer.get('lr', 'is_warm'):
                 self.module_runner.warm_lr(
                     self.configer.get('iters'),
-                    self.scheduler, self.optimizer, backbone_list=[0, ]
+                    self.scheduler, 
+                    self.optimizer, 
+                    backbone_list=[0, ]
                 )
             (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
             self.data_time.update(time.time() - start_time)
 
             foward_start_time = time.time()
-
             with_embed = True if self.configer.get('iters') >= self.contrast_warmup_iters else False
             if self.with_contrast is True:
                 if self.with_memory is True:
                     outputs = self.seg_net(*inputs, targets, with_embed=with_embed)
-
                     outputs['pixel_queue'] = self.seg_net.module.pixel_queue
                     outputs['pixel_queue_ptr'] = self.seg_net.module.pixel_queue_ptr
                     outputs['segment_queue'] = self.seg_net.module.segment_queue
@@ -201,23 +213,10 @@ class Trainer(object):
                 outputs = self.seg_net(*inputs)
 
             self.foward_time.update(time.time() - foward_start_time)
-
             loss_start_time = time.time()
+            
             if is_distributed():
-                import torch.distributed as dist
-                def reduce_tensor(inp):
-                    """
-                    Reduce the loss from all processes so that 
-                    process with rank 0 has the averaged results.
-                    """
-                    world_size = get_world_size()
-                    if world_size < 2:
-                        return inp
-                    with torch.no_grad():
-                        reduced_inp = inp
-                        dist.reduce(reduced_inp, dst=0)
-                    return reduced_inp
-
+                
                 loss = self.pixel_loss(outputs, targets, with_embed=with_embed)
                 backward_loss = loss
                 display_loss = reduce_tensor(backward_loss) / get_world_size()
@@ -240,10 +239,8 @@ class Trainer(object):
 
             self.optimizer.step()
             self.backward_time.update(time.time() - backward_start_time)
-            # if self.configer.get('lr', 'metric') == 'iters':
-            #     self.scheduler.step(self.configer.get('iters'))
-            # else:
-            #     self.scheduler.step(self.configer.get('epoch'))
+            
+            # duhj
             self.scheduler.step()
 
             # Update the vars of the train phase.
@@ -288,10 +285,9 @@ class Trainer(object):
 
         self.configer.plus_one('epoch')
 
+
     def __val(self, data_loader=None):
-        """
-          Validation function during the train phase.
-        """
+        # Validation function during the train phase.
         self.seg_net.eval()
         self.pixel_loss.eval()
         start_time = time.time()
@@ -300,37 +296,12 @@ class Trainer(object):
         data_loader = self.val_loader if data_loader is None else data_loader
         for j, data_dict in enumerate(data_loader):
             if j % 10 == 0:
-                Log.info('{} images processed\n'.format(j))
+                Log.info('{} images validated\n'.format(j))
 
-            if self.configer.get('dataset') == 'lip':
-                (inputs, targets, inputs_rev, targets_rev), batch_size = self.data_helper.prepare_data(data_dict,
-                                                                                                       want_reverse=True)
-            else:
-                (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
+            (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
 
             with torch.no_grad():
-                if self.configer.get('dataset') == 'lip':
-                    inputs = torch.cat([inputs[0], inputs_rev[0]], dim=0)
-
-                    outputs = self.seg_net(inputs)
-
-                    outputs_ = self.module_runner.gather(outputs)
-                    if isinstance(outputs_, (list, tuple)):
-                        outputs_ = outputs_[-1]
-                    outputs = outputs_[0:int(outputs_.size(0) / 2), :, :, :].clone()
-                    outputs_rev = outputs_[int(outputs_.size(0) / 2):int(outputs_.size(0)), :, :, :].clone()
-                    if outputs_rev.shape[1] == 20:
-                        outputs_rev[:, 14, :, :] = outputs_[int(outputs_.size(0) / 2):int(outputs_.size(0)), 15, :, :]
-                        outputs_rev[:, 15, :, :] = outputs_[int(outputs_.size(0) / 2):int(outputs_.size(0)), 14, :, :]
-                        outputs_rev[:, 16, :, :] = outputs_[int(outputs_.size(0) / 2):int(outputs_.size(0)), 17, :, :]
-                        outputs_rev[:, 17, :, :] = outputs_[int(outputs_.size(0) / 2):int(outputs_.size(0)), 16, :, :]
-                        outputs_rev[:, 18, :, :] = outputs_[int(outputs_.size(0) / 2):int(outputs_.size(0)), 19, :, :]
-                        outputs_rev[:, 19, :, :] = outputs_[int(outputs_.size(0) / 2):int(outputs_.size(0)), 18, :, :]
-                    outputs_rev = torch.flip(outputs_rev, [3])
-                    outputs = (outputs + outputs_rev) / 2.
-                    self.evaluator.update_score(outputs, data_dict['meta'])
-
-                elif self.data_helper.conditions.diverse_size:
+                if self.data_helper.conditions.diverse_size:
                     if is_distributed():
                         outputs = [self.seg_net(inputs[i]) for i in range(len(inputs))]
                     else:
@@ -343,7 +314,6 @@ class Trainer(object):
                         if isinstance(outputs_i, torch.Tensor):
                             outputs_i = [outputs_i]
                         self.evaluator.update_score(outputs_i, data_dict['meta'][i:i + 1])
-
                 else:
                     outputs = self.seg_net(*inputs, is_eval=True)
 
@@ -365,11 +335,9 @@ class Trainer(object):
             start_time = time.time()
 
         self.evaluator.update_performance()
-
         self.configer.update(['val_loss'], self.val_losses.avg)
         self.module_runner.save_net(self.seg_net, save_mode='performance', experiment=None)
         self.module_runner.save_net(self.seg_net, save_mode='val_loss', experiment=None)
-        cudnn.benchmark = True
 
         # Print the log info & reset the states.
         if not is_distributed() or get_rank() == 0:
@@ -386,8 +354,6 @@ class Trainer(object):
         self.pixel_loss.train()
 
     def train(self):
-        # cudnn.benchmark = True
-        # self.__val()
         if self.configer.get('network', 'resume') is not None:
             if self.configer.get('network', 'resume_val'):
                 self.__val(data_loader=self.data_loader.get_valloader(dataset='val'))
@@ -401,9 +367,11 @@ class Trainer(object):
             self.__val(data_loader=self.data_loader.get_valloader(dataset='val'))
             return
 
+        print(self.configer.get('iters'))
         while self.configer.get('iters') < self.configer.get('solver', 'max_iters'):
             self.__train()
-
+        print(self.configer.get('iters'))
+        print(self.configer.get('lr', 'lr_policy'))
         # use swa to average the model
         if 'swa' in self.configer.get('lr', 'lr_policy'):
             self.optimizer.swap_swa_sgd()

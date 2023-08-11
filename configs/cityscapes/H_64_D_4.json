@@ -78,9 +78,7 @@
     "checkpoints": {
       "checkpoints_name": "fs_baseocnet_cityscapes_seg",
       "checkpoints_dir": "./checkpoints/cityscapes",
-      // "save_iters": 1000
-      // duhj
-      "save_iters": 100     
+      "save_iters": 1000
     },
     "network":{
       "backbone": "deepbase_resnet101_dilated8",

@@ -1,6 +1,4 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
 
 from abc import ABC
 
@@ -170,10 +168,11 @@ class ContrastCELoss(nn.Module, ABC):
 
     def forward(self, preds, target, with_embed=False):
         h, w = target.size(1), target.size(2)
-        
-        # duhj
-        preds = preds[0]
-        # duhj  
+        # 当--distributed为False时，preds至为列表中嵌套的一个字典，要先取字典赋给preds
+        # 原始程序的preds为列表中包含'seg'和'embed'两列，此种写法对应-distributed为True
+        # 此处为对应--distributed为False的补丁  by duhj
+        preds = preds[0] if len(preds) == 1 else preds
+            
         assert 'seg' in preds
         assert "embed" in preds
         

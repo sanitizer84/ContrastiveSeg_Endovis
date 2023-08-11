@@ -2,21 +2,12 @@
 # -*- coding:utf-8 -*-
 # Author: Donny You(youansheng@gmail.com)
 
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import pdb
 import torch
 import torch.nn as nn
 
 from lib.models.backbones.resnet.resnet_models import ResNetModels
-from lib.models.backbones.resnet.resnext_models import ResNextModels
 from lib.models.backbones.resnet.resnest_models import ResNeStModels
-
-# if torch.__version__[:3] == '0.4':
-#     from lib.models.backbones.resnet.dcn_resnet_models import DCNResNetModels
 
 class NormalResnetBackbone(nn.Module):
     def __init__(self, orig_resnet):
@@ -122,11 +113,7 @@ class ResNetBackbone(object):
     def __init__(self, configer):
         self.configer = configer
         self.resnet_models = ResNetModels(self.configer)
-        self.resnext_models = ResNextModels(self.configer)
         self.resnest_models = ResNeStModels(self.configer)
-
-        # if torch.__version__[:3] == '0.4':
-        #     self.dcn_resnet_models = DCNResNetModels(self.configer)
 
     def __call__(self):
         arch = self.configer.get('network', 'backbone')
@@ -134,37 +121,7 @@ class ResNetBackbone(object):
         if self.configer.exists('network', 'multi_grid'):
             multi_grid = self.configer.get('network', 'multi_grid')
 
-        if arch == 'deepbase_resnet18':
-            orig_resnet = self.resnet_models.deepbase_resnet18()
-            arch_net = NormalResnetBackbone(orig_resnet)
-            arch_net.num_features = 512
-
-        elif arch == 'deepbase_resnet18_dilated8':
-            orig_resnet = self.resnet_models.deepbase_resnet18()
-            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=8, multi_grid=multi_grid)
-            arch_net.num_features = 512
-
-        elif arch == 'deepbase_resnet18_dilated16':
-            orig_resnet = self.resnet_models.deepbase_resnet18()
-            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=16, multi_grid=multi_grid)
-            arch_net.num_features = 512
-
-        elif arch == 'resnet34':
-            orig_resnet = self.resnet_models.resnet34()
-            arch_net = NormalResnetBackbone(orig_resnet)
-            arch_net.num_features = 512
-
-        elif arch == 'resnet34_dilated8':
-            orig_resnet = self.resnet_models.resnet34()
-            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=8, multi_grid=multi_grid)
-            arch_net.num_features = 512
-
-        elif arch == 'resnet34_dilated16':
-            orig_resnet = self.resnet_models.resnet34()
-            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=16, multi_grid=multi_grid)
-            arch_net.num_features = 512
-
-        elif arch == 'resnet50':
+        if arch == 'resnet50':
             orig_resnet = self.resnet_models.resnet50()
             arch_net = NormalResnetBackbone(orig_resnet)
 
@@ -220,48 +177,6 @@ class ResNetBackbone(object):
             orig_resnet = self.resnet_models.deepbase_resnet152()
             arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=16, multi_grid=multi_grid)
 
-        # resnext models
-        elif arch == 'resnext101_32x8d_dilated8':
-            orig_resnet = self.resnext_models.resnext101_32x8d()
-            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=8, multi_grid=multi_grid)
-
-        elif arch == 'resnext101_32x16d_dilated8':
-            orig_resnet = self.resnext_models.resnext101_32x16d()
-            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=8, multi_grid=multi_grid)
-
-        elif arch == 'resnext101_32x32d_dilated8':
-            orig_resnet = self.resnext_models.resnext101_32x32d()
-            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=8, multi_grid=multi_grid)
-
-        elif arch == 'resnext101_32x48d_dilated8':
-            orig_resnet = self.resnext_models.resnext101_32x48d()
-            arch_net = DilatedResnetBackbone(orig_resnet, dilate_scale=8, multi_grid=multi_grid)
-
-        # deformable resnet models
-        # elif arch == 'deepbase_dcn_resnet50_dilated8':
-        #     if torch.__version__[:3] != '0.4':
-        #         raise NotImplementedError
-        #     orig_dcn_resnet = self.dcn_resnet_models.deepbase_dcn_resnet50()
-        #     arch_net = DilatedResnetBackbone(orig_dcn_resnet, dilate_scale=8, multi_grid=multi_grid)
-
-        # elif arch == 'deepbase_dcn_resnet50_dilated16':
-        #     if torch.__version__[:3] != '0.4':
-        #         raise NotImplementedError
-        #     orig_dcn_resnet = self.dcn_resnet_models.deepbase_dcn_resnet50()
-        #     arch_net = DilatedResnetBackbone(orig_dcn_resnet, dilate_scale=16, multi_grid=multi_grid)
-
-        # elif arch == 'deepbase_dcn_resnet101_dilated8':
-        #     if torch.__version__[:3] != '0.4':
-        #         raise NotImplementedError
-        #     orig_dcn_resnet = self.dcn_resnet_models.deepbase_dcn_resnet101()
-        #     arch_net = DilatedResnetBackbone(orig_dcn_resnet, dilate_scale=8, multi_grid=multi_grid)
-
-        # elif arch == 'deepbase_dcn_resnet101_dilated16':
-        #     if torch.__version__[:3] != '0.4':
-        #         raise NotImplementedError
-        #     orig_dcn_resnet = self.dcn_resnet_models.deepbase_dcn_resnet101()
-        #     arch_net = DilatedResnetBackbone(orig_dcn_resnet, dilate_scale=16, multi_grid=multi_grid)
-
         elif arch == 'wide_resnet16_dilated8':
             arch_net = self.resnet_models.wide_resnet16()
 
@@ -275,8 +190,8 @@ class ResNetBackbone(object):
         elif arch == 'deepbase_resnest50_dilated8':
             arch_net = self.resnest_models.deepbase_resnest50()
 
-        elif arch == 'deepbase_resnest101_dilated8':
-            arch_net = self.resnest_models.deepbase_resnest101()
+        # elif arch == 'deepbase_resnest101_dilated8':
+        #     arch_net = self.resnest_models.deepbase_resnest101()
 
         elif arch == 'deepbase_resnest200_dilated8':
             arch_net = self.resnest_models.deepbase_resnest200()

@@ -11,12 +11,12 @@ from collections import namedtuple
 
 # Image processing
 # Check if PIL is actually Pillow as expected
-try:
-    from PIL import PILLOW_VERSION
-except:
-    print("Please install the module 'Pillow' for image processing, e.g.")
-    print("pip install pillow")
-    sys.exit(-1)
+# try:
+#     from PIL import PILLOW_VERSION
+# except:
+#     print("Please install the module 'Pillow' for image processing, e.g.")
+#     print("pip install pillow")
+#     sys.exit(-1)
 
 try:
     import PIL.Image     as Image
@@ -33,8 +33,9 @@ except:
     sys.exit(-1)
 
 # Cityscapes modules
+from lib.metrics.cityscapes.helpers.annotation import Annotation
 try:
-    from lib.metrics.cityscapes.helpers.annotation import Annotation
+    # from lib.metrics.cityscapes.helpers.annotation import Annotation
     from lib.metrics.cityscapes.helpers.labels import labels, name2label, id2label, trainId2label, category2labels
 except:
     print("Failed to find all Cityscapes modules")

@@ -4,9 +4,7 @@
 # Some methods used by main methods.
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
 
 import os
 import math
@@ -81,7 +79,7 @@ class OptimScheduler(object):
             scheduler = lr_scheduler.MultiStepLR(optimizer,
                                                  self.configer.get('lr', 'multistep')['stepvalue'],
                                                  gamma=self.configer.get('lr', 'multistep')['gamma'])
-
+        # 指数方式下降
         elif policy == 'lambda_poly':
             if os.environ.get('lambda_poly_power'):
                 _lambda_poly_power = float(os.environ.get('lambda_poly_power'))
@@ -112,7 +110,7 @@ class OptimScheduler(object):
                                                        cooldown=self.configer.get('lr', 'plateau')['cooldown'],
                                                        min_lr=self.configer.get('lr', 'plateau')['min_lr'],
                                                        eps=self.configer.get('lr', 'plateau')['eps'])
-
+        # Stochastic Weight Averaging 是一种用简单的利用随机梯度下降法就能够提升深度学习模型的泛化能力的方法
         elif policy == 'swa_lambda_poly':
             optimizer = torchcontrib.optim.SWA(optimizer)
             normal_max_iters = int(self.configer.get('solver', 'max_iters') * 0.75)

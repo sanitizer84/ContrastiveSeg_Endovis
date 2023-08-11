@@ -1,6 +1,4 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
 
 from abc import ABC
 
@@ -174,9 +172,7 @@ class PixelContrastLoss(nn.Module, ABC):
 class ContrastCELoss(nn.Module, ABC):
     def __init__(self, configer=None):
         super(ContrastCELoss, self).__init__()
-
         self.configer = configer
-
         ignore_index = -1
         if self.configer.exists('loss', 'params') and 'ce_ignore_index' in self.configer.get('loss', 'params'):
             ignore_index = self.configer.get('loss', 'params')['ce_ignore_index']
@@ -204,22 +200,14 @@ class ContrastCELoss(nn.Module, ABC):
         seg = preds['seg']
         embedding = preds['embed']
 
-        if "segment_queue" in preds:
-            segment_queue = preds['segment_queue']
-        else:
-            segment_queue = None
-
-        if "pixel_queue" in preds:
-            pixel_queue = preds['pixel_queue']
-        else:
-            pixel_queue = None
+        segment_queue = preds['segment_queue'] if "segment_queue" in preds else None
+        pixel_queue = preds['pixel_queue'] if "pixel_queue" in preds else None
 
         pred = F.interpolate(input=seg, size=(h, w), mode='bilinear', align_corners=True)
         loss = self.seg_criterion(pred, target)
 
         if segment_queue is not None and pixel_queue is not None:
             queue = torch.cat((segment_queue, pixel_queue), dim=1)
-
             _, predict = torch.max(seg, 1)
             loss_contrast = self.contrast_criterion(embedding, target, predict, queue)
         else:
