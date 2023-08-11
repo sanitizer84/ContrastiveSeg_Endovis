@@ -360,6 +360,7 @@ class SVTBackbone(object):
             model = svt_large(configer=self.configer)
 
         model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'),
-                                        all_match=False, network="svt")
+            # all_match=False, 
+            network="svt")
 
         return model

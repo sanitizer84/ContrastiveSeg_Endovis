@@ -1,34 +1,34 @@
 #!/usr/bin/env bash
-SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-cd $SCRIPTPATH
-cd ../../../
+# Params:
+# $1: train, val, test, segfix
+# $2: 1, 2, 3... index of run
+# $3: if segfix, val or test
+# $4: ss, ms
+P_PATH="../../.."
 
-DATA_ROOT=$3
-SCRATCH_ROOT=$4
-ASSET_ROOT=${DATA_ROOT}
-
-DATA_DIR="${DATA_ROOT}/cityscapes"
-SAVE_DIR="${SCRATCH_ROOT}/cityscapes/seg_results/"
+DATA_DIR="/tmp/cityscapes"
+SAVE_DIR="${P_PATH}/output/cityscapes"
 BACKBONE="hrnet48"
 
-CONFIGS="configs/cityscapes/H_48_D_4.json"
-CONFIGS_TEST="configs/cityscapes/H_48_D_4_TEST.json"
+CONFIGS="${P_PATH}/configs/cityscapes/H_48_D_4.json"
+CONFIGS_TEST="${P_PATH}/configs/cityscapes/H_48_D_4_TEST.json"
 
 MODEL_NAME="hrnet_w48_ocr_contrast"
 LOSS_TYPE="contrast_auxce_loss"
-CHECKPOINTS_ROOT="${SCRATCH_ROOT}/cityscapes/"
-CHECKPOINTS_NAME="${MODEL_NAME}_lr1x_"$2
-LOG_FILE="${SCRATCH_ROOT}/logs/cityscapes/${CHECKPOINTS_NAME}.log"
+CHECKPOINTS_ROOT="."
+CHECKPOINTS_NAME="${MODEL_NAME}_lr1x"$2
+LOG_FILE="${P_PATH}/log/cityscapes/${CHECKPOINTS_NAME}.log"
 echo "Logging to $LOG_FILE"
 mkdir -p `dirname $LOG_FILE`
 
-PRETRAINED_MODEL="${ASSET_ROOT}/hrnetv2_w48_imagenet_pretrained.pth"
-MAX_ITERS=40000
+PRETRAINED_MODEL="${P_PATH}/pretrained_model/hrnetv2_w48_imagenet_pretrained.pth"
+# MAX_ITERS=40000
+MAX_ITERS=10000
 BATCH_SIZE=8
 BASE_LR=0.01
 
 if [ "$1"x == "train"x ]; then
-  python -u main_contrastive.py --configs ${CONFIGS} \
+  python -u ${P_PATH}/main_contrastive.py --configs ${CONFIGS} \
                        --drop_last y \
                        --phase train \
                        --gathered n \
@@ -50,7 +50,7 @@ if [ "$1"x == "train"x ]; then
                        
 
 elif [ "$1"x == "resume"x ]; then
-  python -u main.py --configs ${CONFIGS} \
+  python -u ${P_PATH}/main_contrastive.py --configs ${CONFIGS} \
                        --drop_last y \
                        --phase train \
                        --gathered n \
@@ -69,7 +69,7 @@ elif [ "$1"x == "resume"x ]; then
 
 
 elif [ "$1"x == "val"x ]; then
-  python -u main.py --configs ${CONFIGS} --drop_last y  --data_dir ${DATA_DIR} \
+  python -u ${P_PATH}/main.py --configs ${CONFIGS} --drop_last y  --data_dir ${DATA_DIR} \
                        --backbone ${BACKBONE} --model_name ${MODEL_NAME} --checkpoints_name ${CHECKPOINTS_NAME} \
                        --phase test --gpu 0 1 2 3 --resume ${CHECKPOINTS_ROOT}/checkpoints/cityscapes/${CHECKPOINTS_NAME}_latest.pth \
                        --loss_type ${LOSS_TYPE} --test_dir ${DATA_DIR}/val/image \
@@ -98,14 +98,14 @@ elif [ "$1"x == "segfix"x ]; then
 elif [ "$1"x == "test"x ]; then
   if [ "$3"x == "ss"x ]; then
     echo "[single scale] test"
-    python -u main.py --configs ${CONFIGS} --drop_last y --data_dir ${DATA_DIR} \
+    python -u ${P_PATH}/main.py --configs ${CONFIGS} --drop_last y --data_dir ${DATA_DIR} \
                          --backbone ${BACKBONE} --model_name ${MODEL_NAME} --checkpoints_name ${CHECKPOINTS_NAME} \
                          --phase test --gpu 0 1 2 3 --resume ${CHECKPOINTS_ROOT}/checkpoints/cityscapes/${CHECKPOINTS_NAME}_latest.pth \
                          --test_dir ${DATA_DIR}/test --log_to_file n \
                          --out_dir ${SAVE_DIR}${CHECKPOINTS_NAME}_test_ss
   else
     echo "[multiple scale + flip] test"
-    python -u main.py --configs ${CONFIGS_TEST} --drop_last y --data_dir ${DATA_DIR} \
+    python -u ${P_PATH}/main.py --configs ${CONFIGS_TEST} --drop_last y --data_dir ${DATA_DIR} \
                          --backbone ${BACKBONE} --model_name ${MODEL_NAME} --checkpoints_name ${CHECKPOINTS_NAME} \
                          --phase test --gpu 0 1 2 3 --resume ${CHECKPOINTS_ROOT}/checkpoints/cityscapes/${CHECKPOINTS_NAME}_latest.pth \
                          --test_dir ${DATA_DIR}/test --log_to_file n \

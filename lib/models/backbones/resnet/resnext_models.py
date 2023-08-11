@@ -237,8 +237,7 @@ class ResNextModels(object):
         model = ResNext('resnext101_32x8d', Bottleneck, [3, 4, 23, 3],
                        pretrained, progress, bn_type=self.configer.get('network', 'bn_type'),
                        **kwargs)
-        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'), 
-            all_match=False, network="resnext")
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'),  network="resnext")
         return model
 
 
@@ -256,8 +255,7 @@ class ResNextModels(object):
         model = ResNext('resnext101_32x16d', Bottleneck, [3, 4, 23, 3],
                        pretrained, progress, bn_type=self.configer.get('network', 'bn_type'),
                        **kwargs)
-        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'), 
-            all_match=False, network="resnext")
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'), network="resnext")
         return model
 
 
@@ -275,8 +273,7 @@ class ResNextModels(object):
         model = ResNext('resnext101_32x32d', Bottleneck, [3, 4, 23, 3],
                        pretrained, progress, bn_type=self.configer.get('network', 'bn_type'),
                        **kwargs)
-        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'), 
-            all_match=False, network="resnext")
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'), network="resnext")
         return model
 
 
@@ -294,6 +291,5 @@ class ResNextModels(object):
         model = ResNext('resnext101_32x48d', Bottleneck, [3, 4, 23, 3],
                        pretrained, progress, bn_type=self.configer.get('network', 'bn_type'),
                        **kwargs)
-        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'), 
-            all_match=False, network="resnext")
+        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'), network="resnext")
         return model

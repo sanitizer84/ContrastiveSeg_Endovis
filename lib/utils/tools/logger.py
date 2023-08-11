@@ -3,9 +3,6 @@
 # Author: Donny You(youansheng@gmail.com)
 # Logging tool implemented with the python Package logging.
 
-
-
-
 import argparse
 import logging
 import os
@@ -200,4 +197,3 @@ if __name__ == "__main__":
     Logger.debug("debug test.")
     Logger.warn("warn test.")
     Logger.error("error test.")
-    Logger.debug("debug test.")

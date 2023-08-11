@@ -24,3 +24,7 @@ Token-to-Token ViT
 摘要：ViT在没有庞大数据规模的数据集上效果不如传统的ResNet。T2T-ViT相比于ViT，参数量和MACs(Multi-Adds)减少了200%，性能在ImageNet上有2.5%的提升，又快又强。
 
 
+gitee提交代码步骤：
+  683  git add .
+  684  git commit -m "deeplabV3原版和对比学习都可以运行"
+  685  git push -f  contrastive-seg master

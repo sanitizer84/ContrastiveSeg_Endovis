@@ -748,43 +748,38 @@ class HRNetBackbone(object):
 
         if arch == 'hrnet32':
             arch_net = HighResolutionNet(MODEL_CONFIGS['hrnet32'],
-                                         bn_type='torchsyncbn',
-                                         bn_momentum=0.1)
+                bn_type='torchsyncbn',
+                bn_momentum=0.1)
             if resume is None:
                 arch_net = ModuleHelper.load_model(arch_net,
-                                                   pretrained=self.configer.get('network', 'pretrained'),
-                                                   all_match=False,
-                                                   network='hrnet')
+                    pretrained=self.configer.get('network', 'pretrained'),
+                    network='hrnet')
 
         elif arch == 'hrnet48':
             arch_net = HighResolutionNet(MODEL_CONFIGS['hrnet48'],
-                                         bn_type='torchsyncbn',
-                                         bn_momentum=0.1)
+                bn_type='torchsyncbn',
+                bn_momentum=0.1)
             if resume is None:
                 arch_net = ModuleHelper.load_model(arch_net,
-                                                   pretrained=self.configer.get('network', 'pretrained'),
-                                                   all_match=False,
-                                                   network='hrnet')
+                    pretrained=self.configer.get('network', 'pretrained'),
+                    network='hrnet')
 
         elif arch == 'hrnet64':
             arch_net = HighResolutionNet(MODEL_CONFIGS['hrnet64'],
-                                         bn_type='torchsyncbn',
-                                         bn_momentum=0.1)
+                bn_type='torchsyncbn',
+                bn_momentum=0.1)
             if resume is None:
                 arch_net = ModuleHelper.load_model(arch_net,
-                                                   pretrained=self.configer.get('network', 'pretrained'),
-                                                   all_match=False,
-                                                   network='hrnet')
+                    pretrained=self.configer.get('network', 'pretrained'),
+                    network='hrnet')
 
         elif arch == 'hrnet2x20':
             arch_net = HighResolutionNext(MODEL_CONFIGS['hrnet2x20'],
-                                          bn_type=self.configer.get('network', 'bn_type'))
+                bn_type=self.configer.get('network', 'bn_type'))
             if resume is None:
                 arch_net = ModuleHelper.load_model(arch_net,
-                                                   pretrained=self.configer.get('network', 'pretrained'),
-                                                   all_match=False,
-                                                   network='hrnet')
-
+                    pretrained=self.configer.get('network', 'pretrained'),
+                    network='hrnet')
         else:
             raise Exception('Architecture undefined!')
 

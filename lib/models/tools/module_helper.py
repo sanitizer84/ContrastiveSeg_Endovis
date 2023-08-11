@@ -102,7 +102,6 @@ class ModuleHelper(object):
             exit(1)
 
     @staticmethod
-    # def load_model(model, pretrained=None, all_match=True, network='resnet101'):
     def load_model(model, pretrained=None, network='resnet101'):
         if pretrained is None:
             return model
@@ -148,7 +147,7 @@ class ModuleHelper(object):
                     interpolate(pretrained_dict['pos_embed3'].unsqueeze(dim=0), size=[1024, 320])[0]
                 load_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys()}
 
-            elif network == "hrnet" or network == "xception" or network == 'resnest':
+            elif network == "hrnet"  or network == 'resnest':
                 load_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys()}
                 Log.info('Missing keys: {}'.format(list(set(model_dict) - set(load_dict))))
 

@@ -380,7 +380,7 @@ class DCNResNetModels(object):
         model = DCNResNet(Bottleneck, [3, 4, 6, 3], deep_base=True,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
         model = ModuleHelper.load_model(model, 
-                                        all_match=False, 
+                                        # all_match=False, 
                                         pretrained=self.configer.get('network', 'pretrained'),
                                         network="dcnet")
         return model
@@ -393,7 +393,7 @@ class DCNResNetModels(object):
         model = DCNResNet(Bottleneck, [3, 4, 23, 3], deep_base=True,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
         model = ModuleHelper.load_model(model, 
-                                        all_match=False, 
-                                        pretrained=self.configer.get('network', 'pretrained'),
-                                        network="dcnet")
+            # all_match=False, 
+            pretrained=self.configer.get('network', 'pretrained'),
+            network="dcnet")
         return model

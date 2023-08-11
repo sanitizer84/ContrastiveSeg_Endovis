@@ -325,6 +325,7 @@ class PCPVTBackbone(object):
             model = pvt_large(configer=self.configer)
 
         model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'),
-                                        all_match=False, network="pcpvt")
+            # all_match=False, 
+            network="pcpvt")
 
         return model

@@ -141,16 +141,14 @@ class HRNet_W48_OCR_CONTRAST(nn.Module):
         return {'seg': out, 'seg_aux': out_aux, 'embed': emb}
 
 
-class HRNet_W48_MEM(nn.Module):
+class HRNet_W48_Contrast_MEM(nn.Module):
     def __init__(self, configer, dim=256, m=0.999, with_masked_ppm=False):
-        super(HRNet_W48_MEM, self).__init__()
+        super(HRNet_W48_Contrast_MEM, self).__init__()
         self.configer = configer
         self.m = m
         self.r = self.configer.get('contrast', 'memory_size')
         self.with_masked_ppm = with_masked_ppm
-
         num_classes = self.configer.get('data', 'num_classes')
-
         self.encoder_q = HRNet_W48_CONTRAST(configer)
 
         self.register_buffer("segment_queue", torch.randn(num_classes, self.r, dim))

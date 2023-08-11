@@ -50,7 +50,7 @@ if [ "$1"x == "train"x ]; then
     # 2>&1 | tee ${LOG_FILE}
 
 elif [ "$1"x == "resume"x ]; then
-  python -u main_contrastive.py --configs ${CONFIGS} \
+  python -u ${P_PATH}/main_contrastive.py --configs ${CONFIGS} \
     --drop_last y \
     --phase train \
     --gathered n \

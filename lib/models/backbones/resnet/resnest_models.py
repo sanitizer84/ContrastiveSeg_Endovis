@@ -383,8 +383,10 @@ class ResNeStModels(object):
                        deep_stem=False, stem_width=32, avg_down=True,
                        avd=True, avd_first=False, 
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'),
-                                        all_match=False, network="resnest")
+        model = ModuleHelper.load_model(model, 
+                pretrained=self.configer.get('network', 'pretrained'),
+                # all_match=False, 
+                network="resnest")
         return model
 
     def deepbase_resnest50(self, **kwargs):
@@ -393,8 +395,10 @@ class ResNeStModels(object):
                        deep_stem=True, stem_width=32, avg_down=True,
                        avd=True, avd_first=False, 
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'),
-                                        all_match=False, network="resnest")
+        model = ModuleHelper.load_model(model, 
+                                        pretrained=self.configer.get('network', 'pretrained'),
+                                        # all_match=False, 
+                                        network="resnest")
         return model
 
     def resnest101(self, **kwargs):
@@ -404,7 +408,8 @@ class ResNeStModels(object):
                         avd=True, avd_first=False,
                         bn_type=self.configer.get('network', 'bn_type'), **kwargs)
         model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'),
-                                        all_match=False, network="resnest")
+                                        # all_match=False, 
+                                        network="resnest")
         return model
 
     def deepbase_resnest101(self, **kwargs):
@@ -414,7 +419,8 @@ class ResNeStModels(object):
                         avd=True, avd_first=False,
                         bn_type=self.configer.get('network', 'bn_type'), **kwargs)
         model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'), 
-                                        all_match=False, network="resnest")
+                                        # all_match=False, 
+                                        network="resnest")
         return model
 
     def deepbase_resnest200(self, **kwargs):
@@ -424,7 +430,8 @@ class ResNeStModels(object):
                         avd=True, avd_first=False,
                         bn_type=self.configer.get('network', 'bn_type'), **kwargs)
         model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'), 
-                                        all_match=False, network="resnest")
+                                        # all_match=False, 
+                                        network="resnest")
         return model
 
     def deepbase_resnest269(self, **kwargs):
@@ -434,5 +441,6 @@ class ResNeStModels(object):
                         avd=True, avd_first=False,
                         bn_type=self.configer.get('network', 'bn_type'), **kwargs)
         model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'), 
-                                        all_match=False, network="resnest")
+                                        # all_match=False, 
+                                        network="resnest")
         return model
