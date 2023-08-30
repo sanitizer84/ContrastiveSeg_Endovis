@@ -9,16 +9,11 @@
 ## LICENSE file in the root directory of this source tree 
 ##+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import argparse
 import json
 import os
 import random
 import time
-import pdb
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -32,9 +27,9 @@ def str2bool(v):
     parser.add_argument('--pretrained', type=str2bool, nargs='?', const=True,
                         dest='pretrained', help='Whether to use pretrained models.')
     """
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+    if v.lower() in ('y', '1'):
         return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+    elif v.lower() in ('n', '0'):
         return False
     else:
         raise argparse.ArgumentTypeError('Unsupported value encountered.')
@@ -54,12 +49,6 @@ if __name__ == "__main__":
     parser.add_argument('--include_val', type=str2bool, nargs='?', default=False,
                         dest='data:include_val', help='Include validation set for training.')
     # #include-coarse is only provided for Cityscapes.
-    parser.add_argument('--include_coarse', type=str2bool, nargs='?', default=False,
-                        dest='data:include_coarse', help='Include coarse-labeled set for training.')
-    parser.add_argument('--only_coarse', type=str2bool, nargs='?', default=False,
-                        dest='data:only_coarse', help='Only include coarse-labeled set for training.')
-    parser.add_argument('--only_mapillary', type=str2bool, nargs='?', default=False,
-                        dest='data:only_mapillary', help='Only include mapillary set for training.')
     parser.add_argument('--only_small', type=str2bool, nargs='?', default=False,
                         dest='data:only_small', help='Only include small val set for testing.')
     ## include-atr is used to choose ATR as extra training set for LIP dataset.
@@ -123,7 +112,7 @@ if __name__ == "__main__":
     parser.add_argument('--lr_policy', default=None, type=str,
                         dest='lr:lr_policy', help='The policy of lr during training.')
     parser.add_argument('--loss_type', default="fs_ce_loss", type=str, dest='loss:loss_type')
-    parser.add_argument('--is_warm', type=str2bool, nargs='?', default=False,
+    parser.add_argument('--is_warm', type=str2bool, nargs='?', default=True,
                         dest='lr:is_warm', help='Whether to warm training.')
 
     # # ***********  Params for display.  **********
@@ -169,7 +158,6 @@ if __name__ == "__main__":
 
     # parser.add_argument('REMAIN', nargs='*')
     parser.add_argument("--local-rank", type=int)
-
     args_parser = parser.parse_args()
 
     from lib.utils.distributed import handle_distributed
@@ -194,7 +182,7 @@ if __name__ == "__main__":
 
     if configer.get('logging', 'log_to_file'):
         log_file = configer.get('logging', 'log_file')
-        new_log_file = '{}_{}'.format(log_file, time.strftime("%Y-%m-%d_%X", time.localtime()))
+        new_log_file = '{}_{}.log'.format(log_file, time.strftime("%X", time.localtime()))
         configer.update(['logging', 'log_file'], new_log_file)
     else:
         configer.update(['logging', 'logfile_level'], None)
@@ -204,23 +192,22 @@ if __name__ == "__main__":
              log_file=configer.get('logging', 'log_file'),
              log_format=configer.get('logging', 'log_format'),
              rewrite=configer.get('logging', 'rewrite'))
-
+    
     model = None
     if configer.get('method') == 'fcn_segmentor':
         if configer.get('phase') == 'train':
+            
             from segmentor.trainer import Trainer
             model = Trainer(configer)
+            model.train()
         elif configer.get('phase') == 'test':
             from segmentor.tester import Tester 
             model = Tester(configer)    
+            model.test()
+        else:
+            Log.error('Phase: {} is not valid.'.format(configer.get('phase')))
+            exit(1)
     else:
         Log.error('Method: {} is not valid.'.format(configer.get('task')))
         exit(1)
 
-    if configer.get('phase') == 'train':
-        model.train()
-    elif configer.get('phase').startswith('test') and configer.get('network', 'resume') is not None:
-        model.test()
-    else:
-        Log.error('Phase: {} is not valid.'.format(configer.get('phase')))
-        exit(1)

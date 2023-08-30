@@ -30,7 +30,6 @@ class _BaseEvaluator:
 
     def print_scores(self, show_miou=True):
         for key, rs in self.running_scores.items():
-            Log.info('Result for {}'.format(key))
             if isinstance(rs, fscore_rslib.F1RunningScore):
                 FScore, FScore_cls = rs.get_scores()
                 Log.info('Mean FScore: {}'.format(FScore))
@@ -46,7 +45,8 @@ class _BaseEvaluator:
                 Log.info('ACC: {}\n'.format(rs.get_mean_acc()))
             else:
                 if show_miou and hasattr(rs, 'get_mean_iou'):
-                    Log.info('Mean IOU: {}\n'.format(rs.get_mean_iou()))
+                    Log.info('Mean  IOU: {}'.format(rs.get_mean_iou()))
+                    Log.info('Class IOU: {}'.format(rs.get_cls_iou()))
                 Log.info('Pixel ACC: {}\n'.format(rs.get_pixel_acc()))
 
                 if hasattr(rs, 'n_classes') and rs.n_classes == 2:
@@ -59,15 +59,15 @@ class _BaseEvaluator:
         """
         Replicate models if using diverse size validation.
         """
-        if is_distributed():
-            return
-        device_ids = list(range(len(self.configer.get('gpu'))))
-        if self.conditions.diverse_size:
-            cudnn.benchmark = False
-            assert self.configer.get('val', 'batch_size') <= len(device_ids)
-            replicas = nn.parallel.replicate(
-                self.trainer.seg_net.module, device_ids)
-            return replicas
+        # if is_distributed():
+        return
+        # device_ids = list(range(len(self.configer.get('gpu'))))
+        # if self.conditions.diverse_size:
+        #     cudnn.benchmark = False
+        #     assert self.configer.get('val', 'batch_size') <= len(device_ids)
+        #     replicas = nn.parallel.replicate(
+        #         self.trainer.seg_net.module, device_ids)
+        #     return replicas
 
     def update_performance(self):
 
@@ -80,7 +80,7 @@ class _BaseEvaluator:
 
             max_perf = self.configer.get('max_performance')
             self.configer.update(['performance'], perf)
-            if perf > max_perf and (not is_distributed() or get_rank() == 0):
+            if perf > max_perf and  get_rank() == 0:
                 Log.info('Performance {} -> {}'.format(max_perf, perf))
         except Exception as e:
             Log.warn(e)

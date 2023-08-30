@@ -12,22 +12,9 @@
 # FCN baseline 
 from lib.models.nets.fcnet import FcnNet
 
-# OCR
-from lib.models.nets.ocrnet import SpatialOCRNet, ASPOCRNet
-from lib.models.nets.ideal_ocrnet import IdealSpatialOCRNet, IdealSpatialOCRNetB, IdealSpatialOCRNetC, IdealGatherOCRNet, IdealDistributeOCRNet
-
 # HRNet
 from lib.models.nets.hrnet import HRNet_W48, HRNet_W48_CONTRAST
 from lib.models.nets.hrnet import HRNet_W48_OCR, HRNet_W48_OCR_B, HRNet_W48_OCR_CONTRAST, HRNet_W48_Contrast_MEM
-
-# # OCNet
-# from lib.models.nets.ocnet import BaseOCNet, AspOCNet
-
-# # ISA Net
-# from lib.models.nets.isanet import ISANet
-
-# # CE2P
-# from lib.models.nets.ce2pnet import CE2P_OCRNet, CE2P_IdealOCRNet, CE2P_ASPOCR
 
 # # SegFix
 # from lib.models.nets.segfix import SegFix_HRNet
@@ -36,18 +23,6 @@ from lib.utils.tools.logger import Logger as Log
 from lib.models.nets.deeplab import DeepLabV3, DeepLabV3Contrast
 
 SEG_MODEL_DICT = {
-    # # OCNet series
-    # 'base_ocnet': BaseOCNet,
-    # 'asp_ocnet': AspOCNet,
-    # OCR series
-    'spatial_ocrnet': SpatialOCRNet,
-    'spatial_asp_ocrnet': ASPOCRNet,
-    # OCR series with ground-truth   
-    'ideal_spatial_ocrnet': IdealSpatialOCRNet,
-    'ideal_spatial_ocrnet_b': IdealSpatialOCRNetB,
-    'ideal_spatial_ocrnet_c': IdealSpatialOCRNetC, 
-    'ideal_gather_ocrnet': IdealGatherOCRNet,
-    'ideal_distribute_ocrnet': IdealDistributeOCRNet,
     # HRNet series
     'hrnet_w48': HRNet_W48,
     'hrnet_w48_ocr': HRNet_W48_OCR,

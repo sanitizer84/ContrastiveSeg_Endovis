@@ -5,18 +5,18 @@
 # $3: if segfix, val or test
 # $4: ss, ms
 P_PATH="../../.."
-DATA_DIR="/tmp/cityscapes"
+DATA_DIR="/home/duhj/datasets/cityscapes"
 SAVE_DIR="${P_PATH}/output/cityscapes"
 BACKBONE="deepbase_resnet101_dilated8"
 
 CONFIGS="${P_PATH}/configs/cityscapes/R_101_D_8.json"
-CONFIGS_TEST="${P_PATH}/cconfigs/cityscapes/R_101_D_8_TEST.json"
+CONFIGS_TEST="${P_PATH}/configs/cityscapes/R_101_D_8_TEST.json"
 
 MODEL_NAME="deeplab_v3"
 LOSS_TYPE="fs_auxce_loss"
-CHECKPOINTS_ROOT="${P_PATH=}/cityscapes/"
+CHECKPOINTS_ROOT="${P_PATH=}"
 CHECKPOINTS_NAME="${MODEL_NAME}_${BACKBONE}_"$2
-LOG_FILE="${P_PATH}/logs/cityscapes/${CHECKPOINTS_NAME}.log"
+LOG_FILE="${P_PATH}/log/cityscapes/${CHECKPOINTS_NAME}.log"
 echo "Logging to $LOG_FILE"
 mkdir -p `dirname $LOG_FILE`
 
@@ -35,7 +35,7 @@ if [ "$1"x == "train"x ]; then
                        --log_to_file n \
                        --backbone ${BACKBONE} \
                        --model_name ${MODEL_NAME} \
-                       --gpu 0 1 2 3 \
+                       --gpu 0 1 \
                        --data_dir ${DATA_DIR} \
                        --loss_type ${LOSS_TYPE} \
                        --max_iters ${MAX_ITERS} \

@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from lib.loss.loss_helper import FSAuxCELoss, FSRMILoss, FSCELoss, FSCELOVASZLoss
+from lib.loss.loss_helper import FSCELoss, FSCELOVASZLoss
 from lib.utils.tools.logger import Logger as Log
 
 
@@ -169,9 +169,9 @@ class PixelContrastLoss(nn.Module, ABC):
         return loss
 
 
-class ContrastCELoss(nn.Module, ABC):
+class MemContrastCELoss(nn.Module, ABC):
     def __init__(self, configer=None):
-        super(ContrastCELoss, self).__init__()
+        super(MemContrastCELoss, self).__init__()
         self.configer = configer
         ignore_index = -1
         if self.configer.exists('loss', 'params') and 'ce_ignore_index' in self.configer.get('loss', 'params'):
@@ -182,9 +182,7 @@ class ContrastCELoss(nn.Module, ABC):
         self.use_rmi = self.configer.get('contrast', 'use_rmi')
         self.use_lovasz = self.configer.get('contrast', 'use_lovasz')
 
-        if self.use_rmi:
-            self.seg_criterion = FSRMILoss(configer=configer)
-        elif self.use_lovasz:
+        if self.use_lovasz:
             self.seg_criterion = FSCELOVASZLoss(configer=configer)
         else:
             self.seg_criterion = FSCELoss(configer=configer)
@@ -217,48 +215,3 @@ class ContrastCELoss(nn.Module, ABC):
             return loss + self.loss_weight * loss_contrast
 
         return loss + 0 * loss_contrast  # just a trick to avoid errors in distributed training
-
-
-class ContrastAuxCELoss(nn.Module, ABC):
-    def __init__(self, configer=None):
-        super(ContrastAuxCELoss, self).__init__()
-
-        self.configer = configer
-
-        ignore_index = -1
-        if self.configer.exists('loss', 'params') and 'ce_ignore_index' in self.configer.get('loss', 'params'):
-            ignore_index = self.configer.get('loss', 'params')['ce_ignore_index']
-        Log.info('ignore_index: {}'.format(ignore_index))
-
-        self.loss_weight = self.configer.get('contrast', 'loss_weight')
-        self.use_rmi = self.configer.get('contrast', 'use_rmi')
-
-        if self.use_rmi:
-            self.seg_criterion = FSAuxRMILoss(configer=configer)
-        else:
-            self.seg_criterion = FSAuxCELoss(configer=configer)
-
-        self.contrast_criterion = PixelContrastLoss(configer=configer)
-
-    def forward(self, preds, target):
-        h, w = target.size(1), target.size(2)
-
-        assert "seg" in preds
-        assert "seg_aux" in preds
-
-        seg = preds['seg']
-        seg_aux = preds['seg_aux']
-
-        embedding = preds['embedding'] if 'embedding' in preds else None
-
-        pred = F.interpolate(input=seg, size=(h, w), mode='bilinear', align_corners=True)
-        pred_aux = F.interpolate(input=seg_aux, size=(h, w), mode='bilinear', align_corners=True)
-        loss = self.seg_criterion([pred_aux, pred], target)
-
-        if embedding is not None:
-            _, predict = torch.max(seg, 1)
-
-            loss_contrast = self.contrast_criterion(embedding, target, predict)
-            return loss + self.loss_weight * loss_contrast
-
-        return loss

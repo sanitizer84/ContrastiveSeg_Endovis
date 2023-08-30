@@ -16,7 +16,6 @@ from lib.models.backbones.backbone_selector import BackboneSelector
 from lib.models.tools.module_helper import ModuleHelper
 from lib.models.modules.projection import ProjectionHead
 from lib.utils.tools.logger import Logger as Log
-from lib.models.modules.hanet_attention import HANet_Conv
 
 
 class HRNet_W48(nn.Module):

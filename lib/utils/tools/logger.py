@@ -8,11 +8,10 @@ import logging
 import os
 import sys
 
-
 DEFAULT_LOGFILE_LEVEL = 'debug'
 DEFAULT_STDOUT_LEVEL = 'info'
 DEFAULT_LOG_FILE = './default.log'
-DEFAULT_LOG_FORMAT = '%(asctime)s %(levelname)-7s %(message)s'
+DEFAULT_LOG_FORMAT = '%(levelname)-1s %(message)s'
 
 LOG_LEVEL_DICT = {
     'debug': logging.DEBUG,
@@ -88,7 +87,7 @@ class Logger(object):
                 return
 
             console.setLevel(LOG_LEVEL_DICT[Logger.stdout_level])
-            console.setFormatter(fmt)
+            # console.setFormatter(fmt)
             Logger.logger.addHandler(console)
 
     @staticmethod
@@ -157,7 +156,7 @@ class Logger(object):
         filename = os.path.basename(sys._getframe().f_back.f_code.co_filename)
         lineno = sys._getframe().f_back.f_lineno
         prefix = '[{}, {}]'.format(filename,lineno)
-        Logger.logger.warn('{} {}'.format(prefix, message))
+        Logger.logger.warning('{} {}'.format(prefix, message))
 
     @staticmethod
     def error(message):
@@ -184,7 +183,7 @@ if __name__ == "__main__":
                         dest='stdout_level', help='To set the level to print to screen.')
     parser.add_argument('--log_file', default="./default.log", type=str,
                         dest='log_file', help='The path of log files.')
-    parser.add_argument('--log_format', default="%(asctime)s %(levelname)-7s %(message)s",
+    parser.add_argument('--log_format', default="%(levelname)-7s %(message)s",
                         type=str, dest='log_format', help='The format of log messages.')
     parser.add_argument('--rewrite', default=False, type=bool,
                         dest='rewrite', help='Clear the log files existed.')

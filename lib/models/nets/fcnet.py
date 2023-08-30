@@ -8,7 +8,7 @@
 ## LICENSE file in the root directory of this source tree 
 ##+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-import pdb
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -26,13 +26,7 @@ class FcnNet(nn.Module):
         self.num_classes = self.configer.get('data', 'num_classes')
         self.backbone = BackboneSelector(configer).get_backbone()
 
-        # extra added layers
-        if "wide_resnet38" in self.configer.get('network', 'backbone'):
-            in_channels = [2048, 4096]
-        elif "mobilenetv2" in self.configer.get('network', 'backbone'):
-            in_channels = [160, 320]
-        else:
-            in_channels = [1024, 2048]
+        in_channels = [1024, 2048]
         self.cls_head = nn.Sequential(
             nn.Conv2d(in_channels[1], 512, kernel_size=3, stride=1, padding=1),
             ModuleHelper.BNReLU(512, bn_type=self.configer.get('network', 'bn_type')),
@@ -77,13 +71,7 @@ class FcnNet_wo_dsn(nn.Module):
         self.num_classes = self.configer.get('data', 'num_classes')
         self.backbone = BackboneSelector(configer).get_backbone()
 
-        # extra added layers
-        if "wide_resnet38" in self.configer.get('network', 'backbone'):
-            in_channels = [2048, 4096]
-        # elif "mobilenetv2" in self.configer.get('network', 'backbone'):
-        #     in_channels = [160, 320]
-        else:
-            in_channels = [1024, 2048]
+        in_channels = [1024, 2048]
         self.cls_head = nn.Sequential(
             nn.Conv2d(in_channels[1], 512, kernel_size=3, stride=1, padding=1),
             ModuleHelper.BNReLU(512, bn_type=self.configer.get('network', 'bn_type')),

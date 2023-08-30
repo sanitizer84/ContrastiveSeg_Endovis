@@ -3,9 +3,6 @@
 # Author: Donny You(youansheng@gmail.com)
 # Some methods used by main methods.
 
-
-
-
 import math
 import os
 from collections import OrderedDict
@@ -37,17 +34,14 @@ class ModuleRunner(object):
         self.configer.add(['val_loss'], 9999.0)
         if not self.configer.exists('network', 'bn_type'):
             self.configer.add(['network', 'bn_type'], 'torchbn')
-
-        # if self.configer.get('phase') == 'train':
-        #     assert len(self.configer.get('gpu')) > 1 or self.configer.get('network', 'bn_type') == 'torchbn'
-
         Log.info('BN Type is {}.'.format(self.configer.get('network', 'bn_type')))
 
     def to_device(self, *params, force_list=False):
-        if is_distributed():
-            device = torch.device('cuda:{}'.format(get_rank()))
-        else:
-            device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
+        # if is_distributed():
+        device = torch.device('cuda:{}'.format(get_rank()))
+        # else:
+        #     device = torch.device('cpu' if self.configer.get('gpu') is None else 'cuda')
+        
         return_list = list()
         for i in range(len(params)):
             return_list.append(params[i].to(device))
@@ -58,33 +52,30 @@ class ModuleRunner(object):
             return return_list[0] if len(params) == 1 else return_list
 
     def _make_parallel(self, net):
-        if is_distributed():
-            local_rank = get_rank()
+        # if is_distributed():
+        local_rank = get_rank()
 
-            return torch.nn.parallel.DistributedDataParallel(
-                net,
-                device_ids=[local_rank],
-                output_device=local_rank,
-                find_unused_parameters=True
-            )
+        return torch.nn.parallel.DistributedDataParallel(
+            net,
+            device_ids=[local_rank],
+            output_device=local_rank,
+            # find_unused_parameters=True       #duhj
+        )
 
-        if len(self.configer.get('gpu')) == 1:
-            self.configer.update(['network', 'gathered'], True)
+        # if len(self.configer.get('gpu')) == 1:
+        #     self.configer.update(['network', 'gathered'], True)
 
-        return DataParallelModel(net, gather_=self.configer.get('network', 'gathered'))
+        # return DataParallelModel(net, gather_=self.configer.get('network', 'gathered'))
 
     def load_net(self, net):
         net = self.to_device(net)
         net = self._make_parallel(net)
 
-        if not is_distributed():
-            net = net.to(torch.device('cpu' if self.configer.get('gpu') is None else 'cuda'))
-
         net.float()
         # 读取保存的模型参数
         if self.configer.get('network', 'resume') is not None:
             Log.info('Loading checkpoint from {}...'.format(self.configer.get('network', 'resume')))
-            print('===================')
+
             # print (os.getcwd())#获得当前目录
             print(os.path.join(os.getcwd(), self.configer.get('network', 'resume')))
             resume_dict = torch.load(
@@ -170,21 +161,16 @@ class ModuleRunner(object):
             else:
                 Log.warn(err_msg)
 
-    def save_net(self, net, save_mode='iters', experiment=None):
-        if is_distributed() and get_rank() != 0:
+    def save_net(self, net, save_mode='performance', experiment=None):
+        if get_rank() != 0:
             return
 
         state = {
             'config_dict': self.configer.to_dict(),
-            'state_dict': net.state_dict(),
-        }
-        if self.configer.get('checkpoints', 'checkpoints_root') is None:
-            checkpoints_dir = os.path.join(self.configer.get('project_dir'),
-                                           self.configer.get('checkpoints', 'checkpoints_dir'))
-        else:
-            checkpoints_dir = os.path.join(self.configer.get('checkpoints', 'checkpoints_root'),
-                                           self.configer.get('checkpoints', 'checkpoints_dir'))
-
+            'state_dict':  net.state_dict(),
+        }           
+        checkpoints_dir = os.path.join(self.configer.get('project_dir'), 
+                                        self.configer.get('checkpoints', 'checkpoints_root'))
         if not os.path.exists(checkpoints_dir):
             os.makedirs(checkpoints_dir)
 

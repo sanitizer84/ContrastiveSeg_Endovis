@@ -1,21 +1,22 @@
 {
-    "dataset": "cityscapes",
+    "dataset": "davinci_1",
     "method": "fcn_segmentor",
     "data": {
       "image_tool": "cv2",
       "input_mode": "BGR",
-      "num_classes": 19,
-      "label_list": [7, 8, 11, 12, 13, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 31, 32, 33],
-      "data_dir": "/msravcshare/dataset/cityscapes",
+      "num_classes": 8,
+      "label_ready": true,
+      "label_class_ids": [0, 1, 2, 3, 4, 5, 6, 7],
+      "data_dir": "",
       "workers": 8
     },
    "train": {
-      "batch_size": 16,
+      "batch_size": 4,
       "data_transformer": {
         "size_mode": "fix_size",
-        "input_size": [1024, 512],
-        "align_method": "only_pad",
-        "pad_mode": "random"
+        "input_size": [512, 512],
+        "align_method": "only_scale",
+        "pad_mode": "only_scale"
       }
     },
     "val": {
@@ -23,22 +24,22 @@
       "mode": "ss_test",
       "data_transformer": {
         "size_mode": "fix_size",
-        "input_size": [2048, 1024],
-        "align_method": "only_pad"
+        "input_size": [512, 512],
+        "align_method": "only_scale"
       }
     },
     "test": {
       "batch_size": 4,
       "mode": "ss_test",
-      "out_dir": "/msravcshare/dataset/seg_result/cityscapes",
+      "out_dir": "",
       "data_transformer": {
         "size_mode": "fix_size",
-        "input_size": [2048, 1024],
-        "align_method": "only_pad"
+        "input_size": [512, 512],
+        "align_method": "only_scale"
       }
     },
     "train_trans": {
-      "trans_seq": ["random_resize", "random_crop", "random_hflip", "random_brightness"],
+      "trans_seq": [],
       "random_brightness": {
         "ratio": 1.0,
         "shift_value": 10
@@ -55,7 +56,7 @@
       },
       "random_crop":{
         "ratio": 1.0,
-        "crop_size": [1024, 512],
+        "crop_size": [256, 256],
         "method": "random",
         "allow_outside_center": false
       }
@@ -69,15 +70,10 @@
       "mean": [0.485, 0.456, 0.406],
       "std": [0.229, 0.224, 0.225]
     },
-    "checkpoints": {
-      "checkpoints_name": "fs_baseocnet_cityscapes_seg",
-      "checkpoints_dir": "./checkpoints/cityscapes",
-      "save_iters": 1000
-    },
     "network":{
-      "backbone": "deepbase_resnet101_dilated8",
+      "backbone": "hrnet48",
       "multi_grid": [1, 1, 1],
-      "model_name": "base_ocnet",
+      "model_name": "",
       "bn_type": "torchsyncbn",
       "stride": 8,
       "factors": [[8, 8]],
@@ -90,8 +86,8 @@
     "logging": {
       "logfile_level": "info",
       "stdout_level": "info",
-      "log_file": "./log/cityscapes/fs_baseocnet_cityscapes_seg.log",
-      "log_format": "%(asctime)s %(levelname)-7s %(message)s",
+      "log_file": "log/hrnet48d4_train.log",
+      "log_format": "",
       "rewrite": true
     },
     "lr": {
@@ -101,12 +97,17 @@
       "step": {
         "gamma": 0.5,
         "step_size": 100
-      }
+      },
+      "lambda_poly":{
+        "power": 0.9999
+      },
+      "warm_iters":0,
+      "freeze_backbone":false
     },
     "solver": {
-      "display_iter": 10,
-      "test_interval": 2000,
-      "max_iters": 40000
+      "display_iter": 300,
+      "test_interval": 300,
+      "max_iters": 3000
     },
     "optim": {
       "optim_method": "sgd",
@@ -122,15 +123,19 @@
       }
     },
     "loss": {
-      "loss_type": "fs_auxce_loss",
+      "loss_type": "fs_ce_loss",
       "params": {
-        "ce_weight": [0.8373, 0.9180, 0.8660, 1.0345, 1.0166, 0.9969, 0.9754,
-                      1.0489, 0.8786, 1.0023, 0.9539, 0.9843, 1.1116, 0.9037,
-                      1.0865, 1.0955, 1.0865, 1.1529, 1.0507],
+        "ce_weight":
+        [0.40006584,
+        0.9153615,
+        0.960438,
+        0.9780319,
+        0.8489695,
+        0.904349,
+        0.99622023,
+        0.9965638],
         "ce_reduction": "mean",
-        "ce_ignore_index": -1,
-        "ohem_minkeep": 100000,
-        "ohem_thresh": 0.9
+        "ce_ignore_index": -1
       }
     },
     "contrast": {
@@ -138,14 +143,9 @@
       "temperature": 0.07,
       "base_temperature": 0.07,
       "max_samples": 1024,
-      "max_views": 1,
+      "max_views": 16,
       "stride": 8,
-      "warmup_iters": 1000,
       "loss_weight": 1,
-      "use_rmi": false,
-      "use_lovasz": false,
-      "with_memory": true,
-      "memory_size": 5000,
-      "pixel_update_freq": 10
+      "use_rmi": false
     }
 }

@@ -68,7 +68,6 @@ class OptimScheduler(object):
             exit(1)
 
         policy = self.configer.get('lr', 'lr_policy')
-
         scheduler = None
         if policy == 'step':
             scheduler = lr_scheduler.StepLR(optimizer,
@@ -99,6 +98,7 @@ class OptimScheduler(object):
             lambda_cosine = lambda iters: (math.cos(math.pi * iters / self.configer.get('solver', 'max_iters'))
                                            + 1.0) / 2
             scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_cosine)
+            Log.info('Use lambda_cosine policy with power')
 
         elif policy == 'plateau':
             scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,
@@ -110,36 +110,6 @@ class OptimScheduler(object):
                                                        cooldown=self.configer.get('lr', 'plateau')['cooldown'],
                                                        min_lr=self.configer.get('lr', 'plateau')['min_lr'],
                                                        eps=self.configer.get('lr', 'plateau')['eps'])
-        # Stochastic Weight Averaging 是一种用简单的利用随机梯度下降法就能够提升深度学习模型的泛化能力的方法
-        elif policy == 'swa_lambda_poly':
-            optimizer = torchcontrib.optim.SWA(optimizer)
-            normal_max_iters = int(self.configer.get('solver', 'max_iters') * 0.75)
-            swa_step_max_iters = (self.configer.get('solver',
-                                                    'max_iters') - normal_max_iters) // 5 + 1  # we use 5 ensembles here
-
-            def swa_lambda_poly(iters):
-                if iters < normal_max_iters:
-                    return pow(1.0 - iters / normal_max_iters, 0.9)
-                else:  # set lr to half of initial lr and start swa
-                    return 0.5 * pow(1.0 - ((iters - normal_max_iters) % swa_step_max_iters) / swa_step_max_iters, 0.9)
-
-            scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=swa_lambda_poly)
-
-        elif policy == 'swa_lambda_cosine':
-            optimizer = torchcontrib.optim.SWA(optimizer)
-            normal_max_iters = int(self.configer.get('solver', 'max_iters') * 0.75)
-            swa_step_max_iters = (self.configer.get('solver',
-                                                    'max_iters') - normal_max_iters) // 5 + 1  # we use 5 ensembles here
-
-            def swa_lambda_cosine(iters):
-                if iters < normal_max_iters:
-                    return (math.cos(math.pi * iters / normal_max_iters) + 1.0) / 2
-                else:  # set lr to half of initial lr and start swa
-                    return 0.5 * (math.cos(
-                        math.pi * ((iters - normal_max_iters) % swa_step_max_iters) / swa_step_max_iters) + 1.0) / 2
-
-            scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=swa_lambda_cosine)
-
         elif policy == 'warmup_cosine':
             scheduler = WarmupCosineSchedule(optimizer, warmup_steps=1000,
                                              t_total=self.configer.get('solver', 'max_iters'))

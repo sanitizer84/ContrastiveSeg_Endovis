@@ -5,11 +5,6 @@ The implementation of the paper:
 Region Mutual Information Loss for Semantic Segmentation.
 """
 
-# python 2.X, 3.X compatibility
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-
 import pdb
 import torch
 import torch.nn as nn

@@ -15,15 +15,14 @@ CONFIGS_TEST="${P_PATH}/configs/cdavinci/H_48_D_4_TEST.json"
 
 MODEL_NAME="hrnet_w48_contrast"
 LOSS_TYPE="contrast_ce_loss"
-CHECKPOINTS_ROOT="."
-CHECKPOINTS_NAME="${MODEL_NAME}_lr1x"$2
-LOG_FILE="${P_PATH}/log/cityscapes/${CHECKPOINTS_NAME}.log"
+CHECKPOINTS_ROOT="checkpoints/${P_NAME}/"
+CHECKPOINTS_NAME="${MODEL_NAME}_"$2
+LOG_FILE="${P_PATH}/log/${P_NAME}/${CHECKPOINTS_NAME}"
 echo "Logging to $LOG_FILE"
 mkdir -p `dirname $LOG_FILE`
 
 PRETRAINED_MODEL="${P_PATH}/pretrained_model/hrnetv2_w48_imagenet_pretrained.pth"
-# MAX_ITERS=40000
-MAX_ITERS=10000
+MAX_ITERS=3000
 BATCH_SIZE=8
 BASE_LR=0.01
 
@@ -34,7 +33,8 @@ if [ "$1"x == "train"x ]; then
     --gathered y \
     --loss_balance y \
     --pretrained ${PRETRAINED_MODEL} \
-    --log_to_file n \
+    --log_to_file y \
+    --log_file ${LOG_FILE} \
     --backbone ${BACKBONE} \
     --model_name ${MODEL_NAME} \
     --gpu 0 1 \
@@ -55,7 +55,7 @@ elif [ "$1"x == "resume"x ]; then
     --phase train \
     --gathered n \
     --loss_balance y \
-    --log_to_file n \
+    --log_to_file y \
     --backbone ${BACKBONE} \
     --model_name ${MODEL_NAME} \
     --max_iters ${MAX_ITERS} \

@@ -3,6 +3,7 @@ import torch.nn as nn
 import subprocess
 import sys
 import os
+import torch.distributed as dist
 from lib.utils.tools.logger import Logger as Log
 
 
@@ -46,18 +47,10 @@ def handle_distributed(args, main_file):
     # Logic for spawner
     python_exec = sys.executable
     command_args = sys.argv
-    Log.info('{}'.format(command_args))
-    '''
-    # modified by duhj
-    # try:
-    #     main_index = command_args.index('main_contrastive.py')
-    # except:
-    #     main_index = command_args.index('main.py')
-    '''
+    
     main_index = 0  # duhj
     command_args = command_args[main_index+1:]
 
-    print('')
     command_args = [
         python_exec, '-u',
         '-m', 'torch.distributed.launch',
@@ -66,15 +59,18 @@ def handle_distributed(args, main_file):
         main_file,
     ] + command_args
     
+    ''' error on binding port 29400'''
     # command_args = [
-    #     'torchrun' , 
-    #     # '--nproc_per_node', str(world_size),
-    #     # '--master_port', str(29961),
+    #     python_exec, '-m', 
+    #     'torch.distributed.run', 
+    #     '--standalone',
+    #     '--nnodes', '1',
+    #     '--nproc-per-node', '4',
     #     main_file,
     # ] + command_args
     
     
-    print(command_args)
+    Log.info('{}'.format(command_args))
     process = subprocess.Popen(command_args, env=current_env)
     process.wait()
     if process.returncode != 0:
@@ -89,5 +85,5 @@ def _setup_process_group(args):
     torch.distributed.init_process_group(
         'nccl',
         init_method='env://',
-        # rank=local_rank
+        rank=local_rank
     )

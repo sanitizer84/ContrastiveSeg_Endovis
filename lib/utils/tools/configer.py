@@ -3,11 +3,6 @@
 # Author: Donny You(youansheng@gmail.com)
 # Configer class for all hyper parameters.
 
-
-# from __future__ import absolute_import
-# from __future__ import division
-# from __future__ import print_function
-
 import argparse
 import json
 import os
@@ -234,12 +229,6 @@ class _ConditionHelper:
 
     def __init__(self, configer):
         self.configer = configer
-
-    @property
-    def use_multi_dataset(self):
-        root_dirs = self.configer.get('data', 'data_dir')
-        return isinstance(root_dirs, (tuple, list)) and len(root_dirs) > 1
-
     @property
     def pred_sw_offset(self):
         return self.configer.exists('data', 'pred_sw_offset')

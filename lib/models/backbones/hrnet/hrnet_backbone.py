@@ -7,22 +7,12 @@
 # ------------------------------------------------------------------------------
 
 
-
 import os
-import pdb
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-
 from lib.models.tools.module_helper import ModuleHelper
 from lib.utils.tools.logger import Logger as Log
-
-if torch.__version__.startswith('1'):
-    relu_inplace = True
-else:
-    relu_inplace = False
-
 
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
@@ -580,7 +570,7 @@ class HighResolutionNext(nn.Module):
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1,
                                bias=False)
         self.bn1 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(64)
-        self.relu = nn.ReLU(relu_inplace)
+        self.relu = nn.ReLU(inplace=True)
 
         self.stage1_cfg = cfg['STAGE1']
         num_channels = self.stage1_cfg['NUM_CHANNELS']
@@ -638,7 +628,7 @@ class HighResolutionNext(nn.Module):
                                 3, 1, 1, bias=False
                             ),
                             ModuleHelper.BatchNorm2d(bn_type=bn_type)(num_channels_cur_layer[i]),
-                            nn.ReLU(relu_inplace)
+                            nn.ReLU(inplace=True)
                         )
                     )
                 else:
@@ -655,7 +645,7 @@ class HighResolutionNext(nn.Module):
                                 inchannels, outchannels, 3, 2, 1, bias=False
                             ),
                             ModuleHelper.BatchNorm2d(bn_type=bn_type)(outchannels),
-                            nn.ReLU(relu_inplace)
+                            nn.ReLU(inplace=True)
                         )
                     )
                 transition_layers.append(nn.Sequential(*conv3x3s))
@@ -746,36 +736,10 @@ class HRNetBackbone(object):
         resume = self.configer.get('network', 'resume')
         from lib.models.backbones.hrnet.hrnet_config import MODEL_CONFIGS
 
-        if arch == 'hrnet32':
-            arch_net = HighResolutionNet(MODEL_CONFIGS['hrnet32'],
-                bn_type='torchsyncbn',
-                bn_momentum=0.1)
-            if resume is None:
-                arch_net = ModuleHelper.load_model(arch_net,
-                    pretrained=self.configer.get('network', 'pretrained'),
-                    network='hrnet')
-
-        elif arch == 'hrnet48':
+        if arch == 'hrnet48':
             arch_net = HighResolutionNet(MODEL_CONFIGS['hrnet48'],
                 bn_type='torchsyncbn',
                 bn_momentum=0.1)
-            if resume is None:
-                arch_net = ModuleHelper.load_model(arch_net,
-                    pretrained=self.configer.get('network', 'pretrained'),
-                    network='hrnet')
-
-        elif arch == 'hrnet64':
-            arch_net = HighResolutionNet(MODEL_CONFIGS['hrnet64'],
-                bn_type='torchsyncbn',
-                bn_momentum=0.1)
-            if resume is None:
-                arch_net = ModuleHelper.load_model(arch_net,
-                    pretrained=self.configer.get('network', 'pretrained'),
-                    network='hrnet')
-
-        elif arch == 'hrnet2x20':
-            arch_net = HighResolutionNext(MODEL_CONFIGS['hrnet2x20'],
-                bn_type=self.configer.get('network', 'bn_type'))
             if resume is None:
                 arch_net = ModuleHelper.load_model(arch_net,
                     pretrained=self.configer.get('network', 'pretrained'),

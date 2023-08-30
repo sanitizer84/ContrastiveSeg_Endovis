@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from lib.loss.loss_helper import FSAuxCELoss, FSAuxRMILoss, FSCELoss
+from lib.loss.loss_helper import FSCELoss, FSAuxCELoss, FSAuxRMILoss
 from lib.utils.tools.logger import Logger as Log
 
 
@@ -17,32 +17,40 @@ class PixelContrastLoss(nn.Module, ABC):
         self.configer = configer
         self.temperature = self.configer.get('contrast', 'temperature')
         self.base_temperature = self.configer.get('contrast', 'base_temperature')
-
         self.ignore_label = -1
         if self.configer.exists('loss', 'params') and 'ce_ignore_index' in self.configer.get('loss', 'params'):
             self.ignore_label = self.configer.get('loss', 'params')['ce_ignore_index']
 
         self.max_samples = self.configer.get('contrast', 'max_samples')
         self.max_views = self.configer.get('contrast', 'max_views')
+        
+        if self.configer.exists('loss', 'params') and 'ce_weight' in self.configer.get('loss', 'params'):
+            self.weight = self.configer.get('loss', 'params')['ce_weight']
+            self.weight = torch.FloatTensor(self.weight).cuda()
+            Log.info('custom weights used.')
 
     def _hard_anchor_sampling(self, X, y_hat, y):
+        # 这里y_hat是label， y是预测值
         batch_size, feat_dim = X.shape[0], X.shape[-1]
 
         classes = []
         total_classes = 0
         for ii in range(batch_size):
             this_y = y_hat[ii]
-            this_classes = torch.unique(this_y)
-            this_classes = [x for x in this_classes if x != self.ignore_label]
-            this_classes = [x for x in this_classes if (this_y == x).nonzero().shape[0] > self.max_views]
-
+            this_classes = torch.unique(this_y) #所有clasid
+            this_classes = [x for x in this_classes if x != self.ignore_label]  #去掉忽略的
+            
+            #这句？？  max_view是个门槛，低于此门槛的类不被计算！
+            this_classes = [x for x in this_classes if (this_y == x).nonzero().shape[0] > self.max_views]   #label中clasid数量>max_view的
             classes.append(this_classes)
             total_classes += len(this_classes)
+        #以上找出批次图像中所有数量>maxview个数的类别号clasid
 
         if total_classes == 0:
             return None, None
 
         n_view = self.max_samples // total_classes
+        
         n_view = min(n_view, self.max_views)
 
         X_ = torch.zeros((total_classes, n_view, feat_dim), dtype=torch.float).cuda()
@@ -50,55 +58,71 @@ class PixelContrastLoss(nn.Module, ABC):
 
         X_ptr = 0
         for ii in range(batch_size):
+            # 批次里的每一张图
             this_y_hat = y_hat[ii]
             this_y = y[ii]
             this_classes = classes[ii]
-
+            #每个类别
             for cls_id in this_classes:
-                hard_indices = ((this_y_hat == cls_id) & (this_y != cls_id)).nonzero()
-                easy_indices = ((this_y_hat == cls_id) & (this_y == cls_id)).nonzero()
+                # nonzero函数是numpy中用于得到数组array中非零元素的位置（数组索引）的函数。
+                # 它的返回值是一个长度为a.ndim(数组a的轴数)的元组，元组的每个元素都是一个整数数组，
+                # 其值为非零元素的下标在对应轴上的值。
+                
+                #预测和label不一致
+                hard_indices = ((this_y_hat == cls_id) & (this_y != cls_id)).nonzero()  
+                #预测和label一致
+                easy_indices = ((this_y_hat == cls_id) & (this_y == cls_id)).nonzero()  
 
-                num_hard = hard_indices.shape[0]
+                num_hard = hard_indices.shape[0]    #数量
                 num_easy = easy_indices.shape[0]
 
                 if num_hard >= n_view / 2 and num_easy >= n_view / 2:
+                    # 都大于窗口尺寸，各为窗口一半
                     num_hard_keep = n_view // 2
                     num_easy_keep = n_view - num_hard_keep
                 elif num_hard >= n_view / 2:
+                    # easy的少
                     num_easy_keep = num_easy
                     num_hard_keep = n_view - num_easy_keep
                 elif num_easy >= n_view / 2:
+                    # hard的少
                     num_hard_keep = num_hard
                     num_easy_keep = n_view - num_hard_keep
                 else:
                     Log.info('this shoud be never touched! {} {} {}'.format(num_hard, num_easy, n_view))
                     raise Exception
-
+                # randperm(n)：将0~n-1（包括0和n-1）随机打乱后获得的数字序列，函数名是random permutation缩写
+                # 此部分随机抽取要保留的那部分hard和easy像素点索引
                 perm = torch.randperm(num_hard)
+                # 打乱顺序后的前num_hard_keep个
                 hard_indices = hard_indices[perm[:num_hard_keep]]
                 perm = torch.randperm(num_easy)
+                # 打乱顺序后的前num_easy_keep个
                 easy_indices = easy_indices[perm[:num_easy_keep]]
                 indices = torch.cat((hard_indices, easy_indices), dim=0)
-
+                # 抽取出的像素赋值到空白矩阵作为返回值的
                 X_[X_ptr, :, :] = X[ii, indices, :].squeeze(1)
                 y_[X_ptr] = cls_id
                 X_ptr += 1
-
+        # 此函数的目的是取出hard和easy的anchor，即像素点作为features X_, 标签cls_id作为y_
         return X_, y_
 
-    def _contrastive(self, feats_, labels_):
-        anchor_num, n_view = feats_.shape[0], feats_.shape[1]
+
+
+    def _contrastive(self, features_, labels_):
+        anchor_num, n_view = features_.shape[0], features_.shape[1]
 
         labels_ = labels_.contiguous().view(-1, 1)
+        # 构造混淆矩阵？
         mask = torch.eq(labels_, torch.transpose(labels_, 0, 1)).float().cuda()
-
         contrast_count = n_view
-        contrast_feature = torch.cat(torch.unbind(feats_, dim=1), dim=0)
+        contrast_feature = torch.cat(torch.unbind(features_, dim=1), dim=0)
 
         anchor_feature = contrast_feature
         anchor_count = contrast_count
-
-        anchor_dot_contrast = torch.div(torch.matmul(anchor_feature, torch.transpose(contrast_feature, 0, 1)),
+        # 此处计算参看论文里损失函数公式
+        anchor_dot_contrast = torch.div(torch.matmul(anchor_feature, 
+                                                     torch.transpose(contrast_feature, 0, 1)),
                                         self.temperature)
         logits_max, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
         logits = anchor_dot_contrast - logits_max.detach()
@@ -125,32 +149,32 @@ class PixelContrastLoss(nn.Module, ABC):
 
         return loss
 
-    def forward(self, feats, labels=None, predict=None):
+    def forward(self, features, labels=None, predict=None):
+        # 克隆一份labels
         labels = labels.unsqueeze(1).float().clone()
-        labels = torch.nn.functional.interpolate(labels,
-                                                 (feats.shape[2], feats.shape[3]), mode='nearest')
+        # 插值到特征尺寸
+        labels = torch.nn.functional.interpolate(labels, (features.shape[2], features.shape[3]), mode='nearest')
         labels = labels.squeeze(1).long()
-        assert labels.shape[-1] == feats.shape[-1], '{} {}'.format(labels.shape, feats.shape)
+        # 维度尺寸完全相同
+        assert labels.shape[-1] == features.shape[-1], '{} {}'.format(labels.shape, features.shape)
 
-        batch_size = feats.shape[0]
+        batch_size = features.shape[0]
 
         labels = labels.contiguous().view(batch_size, -1)
         predict = predict.contiguous().view(batch_size, -1)
-        feats = feats.permute(0, 2, 3, 1)
-        feats = feats.contiguous().view(feats.shape[0], -1, feats.shape[-1])
+        features = features.permute(0, 2, 3, 1)
+        features = features.contiguous().view(features.shape[0], -1, features.shape[-1])
 
-        feats_, labels_ = self._hard_anchor_sampling(feats, labels, predict)
+        features_, labels_ = self._hard_anchor_sampling(features, labels, predict)
 
-        loss = self._contrastive(feats_, labels_)
+        loss = self._contrastive(features_, labels_)
         return loss
 
 
 class ContrastCELoss(nn.Module, ABC):
     def __init__(self, configer=None):
         super(ContrastCELoss, self).__init__()
-
         self.configer = configer
-
         ignore_index = -1
         if self.configer.exists('loss', 'params') and 'ce_ignore_index' in self.configer.get('loss', 'params'):
             ignore_index = self.configer.get('loss', 'params')['ce_ignore_index']
@@ -158,7 +182,6 @@ class ContrastCELoss(nn.Module, ABC):
 
         self.loss_weight = self.configer.get('contrast', 'loss_weight')
         self.use_rmi = self.configer.get('contrast', 'use_rmi')
-
         if self.use_rmi:
             self.seg_criterion = FSAuxRMILoss(configer=configer)
         else:
@@ -167,28 +190,25 @@ class ContrastCELoss(nn.Module, ABC):
         self.contrast_criterion = PixelContrastLoss(configer=configer)
 
     def forward(self, preds, target, with_embed=False):
-        h, w = target.size(1), target.size(2)
-        # 当--distributed为False时，preds至为列表中嵌套的一个字典，要先取字典赋给preds
-        # 原始程序的preds为列表中包含'seg'和'embed'两列，此种写法对应-distributed为True
-        # 此处为对应--distributed为False的补丁  by duhj
-        preds = preds[0] if len(preds) == 1 else preds
-            
         assert 'seg' in preds
         assert "embed" in preds
-        
+        h, w = target.size(1), target.size(2)               
         seg = preds['seg']
         embedding = preds['embed']
-
+        # 插值/缩放到目标尺寸
         pred = F.interpolate(input=seg, size=(h, w), mode='bilinear', align_corners=True)
+        # 先计算分类交叉熵损失函数
         loss = self.seg_criterion(pred, target)
-
+        # 按行取preds预测结果里的最大值
         _, predict = torch.max(seg, 1)
+        # 计算像素对比损失值
         loss_contrast = self.contrast_criterion(embedding, target, predict)
 
         if with_embed is True:
             return loss + self.loss_weight * loss_contrast
 
         return loss + 0 * loss_contrast  # just a trick to avoid errors in distributed training
+    
 
 
 class ContrastAuxCELoss(nn.Module, ABC):
@@ -204,12 +224,7 @@ class ContrastAuxCELoss(nn.Module, ABC):
 
         self.loss_weight = self.configer.get('contrast', 'loss_weight')
         self.use_rmi = self.configer.get('contrast', 'use_rmi')
-
-        if self.use_rmi:
-            self.seg_criterion = FSAuxRMILoss(configer=configer)
-        else:
-            self.seg_criterion = FSAuxCELoss(configer=configer)
-
+        self.seg_criterion = FSAuxCELoss(configer=configer)
         self.contrast_criterion = PixelContrastLoss(configer=configer)
 
     def forward(self, preds, target, with_embed=False):

@@ -8,29 +8,24 @@
 ## LICENSE file in the root directory of this source tree 
 ##+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-from lib.loss.loss_helper import FSRMILoss, FSCELoss, FSAuxCELoss, FSAuxRMILoss, FSCELOVASZLoss, MSFSAuxRMILoss
+from lib.loss.loss_helper import FSCELoss, FSAuxCELoss, FSCELOVASZLoss, FSAuxRMILoss, FSCERMILoss
 from lib.loss.loss_helper import SegFixLoss
+from lib.loss.loss_contrast import ContrastCELoss, ContrastAuxCELoss
+from lib.loss.loss_contrast_mem import MemContrastCELoss
 from lib.loss.rmi_loss import RMILoss
-from lib.loss.loss_contrast import ContrastAuxCELoss, ContrastCELoss
-from lib.loss.loss_contrast_mem import ContrastCELoss as MemContrastCELoss
-
 from lib.utils.tools.logger import Logger as Log
-from lib.utils.distributed import is_distributed
 
 
 SEG_LOSS_DICT = {
-    'contrast_auxce_loss':  ContrastAuxCELoss,
     'contrast_ce_loss':     ContrastCELoss,
-    'mem_contrast_ce_loss': MemContrastCELoss,
-    
+    'contrast_ce_loss_mem': MemContrastCELoss,
     'fs_ce_loss':           FSCELoss,
-    'fs_auxce_loss':        FSAuxCELoss,
-    'fs_aux_rmi_loss':      FSAuxRMILoss,
     'segfix_loss':          SegFixLoss,
-    'rmi_loss':             RMILoss,
-    'fs_rmi_loss':          FSRMILoss,
     'fs_ce_lovasz_loss':    FSCELOVASZLoss,
-    'ms_fs_aux_rmi_loss':   MSFSAuxRMILoss,
+    'fs_auxce_loss':        FSAuxCELoss,
+    'fs_ce_rmi_loss':       FSCERMILoss,
+    'fs_aux_rmi_loss':      FSAuxRMILoss,
+    'contrast_auxce_loss':  ContrastAuxCELoss
 }
 
 
@@ -39,16 +34,10 @@ class LossManager(object):
         self.configer = configer
 
     def _parallel(self, loss):
-        if is_distributed():
-            Log.info('use distributed loss')
-            return loss
-            
-        if self.configer.get('network', 'loss_balance') and len(self.configer.get('gpu')) > 1:
-            Log.info('use DataParallelCriterion loss')
-            from lib.extensions.parallel.data_parallel import DataParallelCriterion
-            loss = DataParallelCriterion(loss)
-
+        # if is_distributed():
+        Log.info('use distributed loss')
         return loss
+            
 
     def get_seg_loss(self, loss_type=None):
         key = self.configer.get('loss', 'loss_type') if loss_type is None else loss_type

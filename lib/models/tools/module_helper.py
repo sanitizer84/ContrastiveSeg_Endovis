@@ -7,7 +7,7 @@
 
 import functools
 import os
-import pdb
+
 
 import torch
 import torch.nn as nn
@@ -122,10 +122,6 @@ class ModuleHelper(object):
         except:
             # Parameters not fully match
             pretrained_dict = torch.load(pretrained, map_location=lambda storage, loc: storage)
-
-            if network == "wide_resnet":
-                pretrained_dict = pretrained_dict['state_dict']
-
             model_dict = model.state_dict()
 
             if  network == 'pvt':
@@ -147,25 +143,10 @@ class ModuleHelper(object):
                     interpolate(pretrained_dict['pos_embed3'].unsqueeze(dim=0), size=[1024, 320])[0]
                 load_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys()}
 
-            elif network == "hrnet"  or network == 'resnest':
+            elif network == "hrnet":
                 load_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys()}
                 Log.info('Missing keys: {}'.format(list(set(model_dict) - set(load_dict))))
 
-            elif network == "dcnet" or network == "resnext":
-                load_dict = dict()
-                for k, v in pretrained_dict.items():
-                    if 'resinit.{}'.format(k) in model_dict:
-                        load_dict['resinit.{}'.format(k)] = v
-                    else:
-                        if k in model_dict:
-                            load_dict[k] = v
-                        else:
-                            pass
-
-            elif network == "wide_resnet":
-                load_dict = {'.'.join(k.split('.')[1:]): v \
-                             for k, v in pretrained_dict.items() \
-                             if '.'.join(k.split('.')[1:]) in model_dict}
             else:
                 load_dict = {'.'.join(k.split('.')[1:]): v \
                              for k, v in pretrained_dict.items() \

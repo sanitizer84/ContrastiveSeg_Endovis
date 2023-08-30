@@ -10,13 +10,13 @@ SAVE_DIR="${P_PATH}/output/cityscapes"
 BACKBONE="deepbase_resnet101_dilated8"
 
 CONFIGS="${P_PATH}/configs/cityscapes/R_101_D_8.json"
-CONFIGS_TEST="${P_PATH}/cconfigs/cityscapes/R_101_D_8_TEST.json"
+CONFIGS_TEST="${P_PATH}/configs/cityscapes/R_101_D_8_TEST.json"
 
 MODEL_NAME="deeplab_v3_contrast"
 LOSS_TYPE="contrast_auxce_loss"
-CHECKPOINTS_ROOT="${P_PATH=}/cityscapes/"
+CHECKPOINTS_ROOT="${P_PATH=}"
 CHECKPOINTS_NAME="${MODEL_NAME}_${BACKBONE}_"$2
-LOG_FILE="${P_PATH}/logs/cityscapes/${CHECKPOINTS_NAME}.log"
+LOG_FILE="${P_PATH}/log/cityscapes/${CHECKPOINTS_NAME}.log"
 echo "Logging to $LOG_FILE"
 mkdir -p `dirname $LOG_FILE`
 

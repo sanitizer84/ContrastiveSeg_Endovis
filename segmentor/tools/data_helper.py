@@ -106,10 +106,10 @@ class DataHelper:
 
         if self.conditions.diverse_size and not self.trainer.seg_net.training:
 
-            if is_distributed():
-                assert len(seq) == 1
-                seq = [x.unsqueeze(0) for x in seq[0]]
-                return self.trainer.module_runner.to_device(*seq, force_list=force_list)
+            # if is_distributed():
+            assert len(seq) == 1
+            seq = [x.unsqueeze(0) for x in seq[0]]
+            return self.trainer.module_runner.to_device(*seq, force_list=force_list)
 
             device_ids = list(range(len(self.configer.get('gpu'))))
             return split_and_cuda(seq, device_ids)

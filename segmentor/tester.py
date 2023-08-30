@@ -11,7 +11,7 @@
 import os
 import time
 import timeit
-# import pdb
+# 
 import cv2
 # import scipy
 import collections
@@ -75,7 +75,7 @@ class Tester(object):
         height, width = label_map.shape
         label_dst = np.zeros((height, width), dtype=np.uint8)
         for i in range(self.configer.get('data', 'num_classes')):
-            label_dst[label_map == i] = self.configer.get('data', 'label_list')[i]
+            label_dst[label_map == i] = self.configer.get('data', 'label_class_ids')[i]
 
         label_dst = np.array(label_dst, dtype=np.uint8)
 
@@ -171,7 +171,7 @@ class Tester(object):
                                                                                                'reduce_zero_label'):
                         label_img = label_img + 1
                         label_img = label_img.astype(np.uint8)
-                    if self.configer.exists('data', 'label_list'):
+                    if self.configer.exists('data', 'label_class_ids'):
                         label_img_ = self.__relabel(label_img)
                     else:
                         label_img_ = label_img

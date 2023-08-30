@@ -19,7 +19,7 @@ CHECKPOINTS_ROOT="."
 CHECKPOINTS_NAME="${MODEL_NAME}_lr1x"$2
 LOG_FILE="${P_PATH}/log/cityscapes/${CHECKPOINTS_NAME}.log"
 echo "Logging to $LOG_FILE"
-mkdir -p `dirname $LOG_FILE`
+# mkdir -p `dirname $LOG_FILE`
 
 PRETRAINED_MODEL="${P_PATH}/pretrained_model/hrnetv2_w48_imagenet_pretrained.pth"
 # MAX_ITERS=40000

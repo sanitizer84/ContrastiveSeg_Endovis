@@ -3,9 +3,6 @@
 # Author: Donny You(youansheng@gmail.com)
 # Parse label file of segmentation.
 
-
-
-
 import argparse
 import os
 

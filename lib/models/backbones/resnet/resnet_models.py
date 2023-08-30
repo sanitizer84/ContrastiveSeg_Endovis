@@ -12,7 +12,6 @@ from collections import OrderedDict
 import torch.nn as nn
 
 from lib.models.tools.module_helper import ModuleHelper
-from lib.models.backbones.resnet.wide_resnet_models import WiderResNetA2
 
 model_urls = {
     'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
@@ -243,31 +242,4 @@ class ResNetModels(object):
         model = ResNet(Bottleneck, [3, 8, 36, 3], deep_base=True,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
         model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'), network="resnet152")
-        return model
-
-    def wide_resnet16(self, **kwargs):
-        """Constructs a WideResNet-16 model.
-        """
-        model = WiderResNetA2([1, 1, 1, 1, 1, 1],
-                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'), 
-            network="wide_resnet")
-        return model
-
-    def wide_resnet20(self, **kwargs):
-        """Constructs a WideResNet-20 model.
-        """
-        model = WiderResNetA2([1, 1, 1, 3, 1, 1],
-                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'), 
-            network="wide_resnet")
-        return model
-
-    def wide_resnet38(self, **kwargs):
-        """Constructs a WideResNet-38 model.
-        """
-        model = WiderResNetA2([3, 3, 6, 3, 1, 1],
-                       bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'), 
-            network="wide_resnet")
         return model

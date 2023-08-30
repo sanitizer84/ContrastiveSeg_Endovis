@@ -3,29 +3,12 @@
 # Author: Donny You(youansheng@gmail.com)
 # CityScape Seg data generator.
 
-
-
-
 import os
 import argparse
 import shutil
 
-
 IMAGE_DIR = 'image'
 LABEL_DIR = 'label'
-
-def str2bool(v):
-    """ Usage:
-    parser.add_argument('--pretrained', type=str2bool, nargs='?', const=True,
-                        dest='pretrained', help='Whether to use pretrained models.')
-    """
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Unsupported value encountered.')
-
 
 class CityscapesGenerator(object):
 
@@ -134,18 +117,13 @@ class CityscapesGenerator(object):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--coarse', type=str2bool, nargs='?', default=False,
+    parser.add_argument('--coarse', default=False,
                         dest='coarse', help='Whether is the coarse data.')
     parser.add_argument('--save_dir', default=None, type=str,
                         dest='save_dir', help='The directory to save the data.')
     parser.add_argument('--ori_root_dir', default=None, type=str,
                         dest='ori_root_dir', help='The directory of the cityscapes data.')
-
     args = parser.parse_args()
 
     cityscapes_generator = CityscapesGenerator(args)
     cityscapes_generator.generate_label()
-
-# /root/miniconda3/bin/python cityscapes_generator.py --coarse True \
-# --save_dir /msravcshare/dataset/cityscapes/ --ori_root_dir \
-# /msravcshare/yuyua/code/segmentation/deeplab_v3/dataset/cityscapes/

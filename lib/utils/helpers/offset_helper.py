@@ -39,6 +39,7 @@ class DTOffsetConfig:
 
     # direction configurations
     num_classes = int(os.environ.get('dt_num_classes', 8))
+
     assert num_classes in (4, 8, 16, 32,)
 
     # offset scale configurations

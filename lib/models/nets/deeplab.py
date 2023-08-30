@@ -14,11 +14,7 @@ class DeepLabV3Contrast(nn.Module):
         self.backbone = BackboneSelector(configer).get_backbone()
         self.proj_dim = self.configer.get('contrast', 'proj_dim')
 
-        # extra added layers
-        if "wide_resnet38" in self.configer.get('network', 'backbone'):
-            in_channels = [2048, 4096]
-        else:
-            in_channels = [1024, 2048]
+        in_channels = [1024, 2048]
 
         self.proj_head = ProjectionHead(dim_in=in_channels[1], proj_dim=self.proj_dim)
 

@@ -1,6 +1,4 @@
 import torch.nn as nn
-import torch
-import torch.distributed as dist
 
 class GlobalAvgPool2d(nn.Module):
     def __init__(self):

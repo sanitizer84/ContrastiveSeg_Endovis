@@ -39,12 +39,7 @@ if __name__ == "__main__":
     parser.add_argument('--include_val', type=str2bool, nargs='?', default=False,
                         dest='data:include_val', help='Include validation set for training.')
     # include-coarse is only provided for Cityscapes.
-    parser.add_argument('--include_coarse', type=str2bool, nargs='?', default=False,
-                        dest='data:include_coarse', help='Include coarse-labeled set for training.')
-    parser.add_argument('--only_coarse', type=str2bool, nargs='?', default=False,
-                        dest='data:only_coarse', help='Only include coarse-labeled set for training.')
-    parser.add_argument('--only_mapillary', type=str2bool, nargs='?', default=False,
-                        dest='data:only_mapillary', help='Only include mapillary set for training.')
+
     parser.add_argument('--only_small', type=str2bool, nargs='?', default=False,
                         dest='data:only_small', help='Only include small val set for testing.')
     # include-atr is used to choose ATR as extra training set for LIP dataset.
@@ -62,7 +57,7 @@ if __name__ == "__main__":
                         dest='val:batch_size', help='The batch size of validation.')
 
     # ***********  Params for checkpoint.  **********
-    parser.add_argument('--checkpoints_root', default="./", type=str,
+    parser.add_argument('--checkpoints_root', default=".", type=str,
                         dest='checkpoints:checkpoints_root', help='The root dir of model save path.')
     parser.add_argument('--checkpoints_name', default="hrnet_w48_contrast_lr1x1", type=str,
                         dest='checkpoints:checkpoints_name', help='The name of checkpoint model.')
@@ -185,7 +180,7 @@ if __name__ == "__main__":
 
     if configer.get('logging', 'log_to_file'):
         log_file = configer.get('logging', 'log_file')
-        new_log_file = '{}_{}'.format(log_file, time.strftime("%Y-%m-%d_%X", time.localtime()))
+        new_log_file = '{}_{}.log'.format(log_file, time.strftime("%Y-%m-%d_%X", time.localtime()))
         configer.update(['logging', 'log_file'], new_log_file)
     else:
         configer.update(['logging', 'logfile_level'], None)
@@ -208,6 +203,9 @@ if __name__ == "__main__":
             from segmentor.tester import Tester 
             model = Tester(configer)    
             model.test()
+        else:
+            Log.error('Phase: {} is not valid.'.format(configer.get('phase')))
+            exit(1)
     else:
         Log.error('Method: {} is not valid.'.format(configer.get('method')))
         exit(1)

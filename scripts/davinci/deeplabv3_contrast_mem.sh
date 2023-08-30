@@ -10,15 +10,16 @@ DATA_DIR="/tmp/512"
 SAVE_DIR="${P_PATH}/output/${P_NAME}_1"
 BACKBONE="deepbase_resnet101_dilated8"
 
-CONFIGS="${P_PATH}/configs/${P_NAME}/R_101_D_8.json"
+CONFIGS="${P_PATH}/configs/${P_NAME}/R_101_D_8_mem.json"
 CONFIGS_TEST="${P_PATH}/configs/davinci/R_101_D_8_TEST.json"
 
-MODEL_NAME="deeplab_v3"
-LOSS_TYPE="fs_ce_loss"
+MODEL_NAME="deeplab_v3_contrast"
+LOSS_TYPE="contrast_auxce_loss"
 CHECKPOINTS_ROOT="checkpoints/${P_NAME}"
-CHECKPOINTS_NAME="${MODEL_NAME}_lr1x"$2
-LOG_FILE="${P_PATH}/log/${P_NAME}/${CHECKPOINTS_NAME}.log"
+CHECKPOINTS_NAME="${MODEL_NAME}_"$2
+LOG_FILE="${P_PATH}/log/${P_NAME}/${CHECKPOINTS_NAME}"
 echo "Logging to $LOG_FILE"
+mkdir -p `dirname $LOG_FILE`
 
 PRETRAINED_MODEL="${P_PATH}/pretrained_model/resnet101-5d3b4d8f.pth"
 MAX_ITERS=10000
@@ -26,34 +27,33 @@ BATCH_SIZE=4
 BASE_LR=0.004
 
 if [ "$1"x == "train"x ]; then
-  python ${P_PATH}/main.py --configs ${CONFIGS} \
+  python -u ${P_PATH}/main_contrastive.py --configs ${CONFIGS} \
                        --drop_last y \
                        --phase train \
                        --gathered y \
                        --loss_balance y \
-                       --log_to_file n \
+                       --log_to_file y \
                        --backbone ${BACKBONE} \
                        --model_name ${MODEL_NAME} \
-                       --gpu 0 1 \
+                       --gpu 0 1\
                        --data_dir ${DATA_DIR} \
                        --loss_type ${LOSS_TYPE} \
                        --max_iters ${MAX_ITERS} \
                        --checkpoints_root ${CHECKPOINTS_ROOT} \
                        --checkpoints_name ${CHECKPOINTS_NAME} \
                        --pretrained ${PRETRAINED_MODEL} \
+                       --distributed \
                        --train_batch_size ${BATCH_SIZE} \
-                       --base_lr ${BASE_LR} \
-                       --distributed 
-                      #   \
+                       --base_lr ${BASE_LR}
                       #  2>&1 | tee ${LOG_FILE}
-
+                       
 
 elif [ "$1"x == "resume"x ]; then
-  python -u ${P_PATH}/main.py --configs ${CONFIGS} \
+  python -u main_contrastive.py --configs ${CONFIGS} \
                        --drop_last y \
                        --phase train \
-                       --gathered n \
-                       --loss_balance y \
+                       --gathered y \
+                       --loss_balance n \
                        --log_to_file n \
                        --backbone ${BACKBONE} \
                        --model_name ${MODEL_NAME} \
@@ -61,22 +61,21 @@ elif [ "$1"x == "resume"x ]; then
                        --data_dir ${DATA_DIR} \
                        --loss_type ${LOSS_TYPE} \
                        --gpu 0 1 2 3 \
-                       --checkpoints_name ${CHECKPOINTS_NAME} \
                        --resume_continue y \
-                       --resume ${CHECKPOINTS_ROOT}/checkpoints/cityscapes/${CHECKPOINTS_NAME}_latest.pth \
-                       --train_batch_size ${BATCH_SIZE} \
-                       --distributed \
+                       --resume ./checkpoints/cityscapes/${CHECKPOINTS_NAME}_latest.pth \
+                       --checkpoints_name ${CHECKPOINTS_NAME} \
                         2>&1 | tee -a ${LOG_FILE}
 
-
 elif [ "$1"x == "val"x ]; then
-  python -u ${P_PATH}/main.py --configs ${CONFIGS} --drop_last y  --data_dir ${DATA_DIR} \
+  python -u main.py --configs ${CONFIGS} --drop_last y \
                        --backbone ${BACKBONE} --model_name ${MODEL_NAME} --checkpoints_name ${CHECKPOINTS_NAME} \
                        --phase test --gpu 0 1 2 3 --resume ${CHECKPOINTS_ROOT}/checkpoints/cityscapes/${CHECKPOINTS_NAME}_latest.pth \
                        --loss_type ${LOSS_TYPE} --test_dir ${DATA_DIR}/val/image \
-                       --out_dir ${SAVE_DIR}${CHECKPOINTS_NAME}_val_ms
+                       --out_dir ${SAVE_DIR}${CHECKPOINTS_NAME}_val --data_dir ${DATA_DIR}
 
-  python -m lib.metrics.cityscapes_evaluator --pred_dir ${SAVE_DIR}${CHECKPOINTS_NAME}_val_ms/label  \
+
+  cd lib/metrics
+  python -u cityscapes_evaluator.py --pred_dir ${SAVE_DIR}${CHECKPOINTS_NAME}_val/label  \
                                        --gt_dir ${DATA_DIR}/val/label
 
 elif [ "$1"x == "segfix"x ]; then
@@ -106,9 +105,9 @@ elif [ "$1"x == "test"x ]; then
                          --out_dir ${SAVE_DIR}${CHECKPOINTS_NAME}_test_ss
   else
     echo "[multiple scale + flip] test"
-    python -u ${P_PATH}/main.py --configs ${CONFIGS_TEST} --drop_last y --data_dir ${DATA_DIR} \
+    python -u main.py --configs ${CONFIGS_TEST} --drop_last y \
                          --backbone ${BACKBONE} --model_name ${MODEL_NAME} --checkpoints_name ${CHECKPOINTS_NAME} \
-                         --phase test --gpu 0 1 2 3 --resume ${CHECKPOINTS_ROOT}/checkpoints/cityscapes/${CHECKPOINTS_NAME}_latest.pth \
+                         --phase test --gpu 0 1 2 3 --resume ./checkpoints/cityscapes/${CHECKPOINTS_NAME}_latest.pth \
                          --test_dir ${DATA_DIR}/test --log_to_file n \
                          --out_dir ${SAVE_DIR}${CHECKPOINTS_NAME}_test_ms
   fi

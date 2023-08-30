@@ -15,17 +15,16 @@ CONFIGS_TEST="${P_PATH}/configs/davinci/R_101_D_8_TEST.json"
 
 MODEL_NAME="deeplab_v3_contrast"
 LOSS_TYPE="contrast_auxce_loss"
-CHECKPOINTS_ROOT="${P_PATH=}"
-CHECKPOINTS_NAME="${MODEL_NAME}_${BACKBONE}_"$2
-LOG_FILE="${P_PATH}/log/cityscapes/${CHECKPOINTS_NAME}.log"
+CHECKPOINTS_ROOT="checkpoints/${P_NAME}"
+CHECKPOINTS_NAME="${MODEL_NAME}_lr1x"$2
+LOG_FILE="${P_PATH}/log/${P_NAME}/${CHECKPOINTS_NAME}.log"
 echo "Logging to $LOG_FILE"
 mkdir -p `dirname $LOG_FILE`
 
-# PRETRAINED_MODEL="${P_PATH}/pretrained_model/resnet101_deeplabv3_dilated8.pth"
 PRETRAINED_MODEL="${P_PATH}/pretrained_model/resnet101-5d3b4d8f.pth"
-MAX_ITERS=40000
-BATCH_SIZE=8
-BASE_LR=0.01
+MAX_ITERS=10000
+BATCH_SIZE=4
+BASE_LR=0.004
 
 if [ "$1"x == "train"x ]; then
   python -u ${P_PATH}/main_contrastive.py --configs ${CONFIGS} \
@@ -36,7 +35,7 @@ if [ "$1"x == "train"x ]; then
                        --log_to_file n \
                        --backbone ${BACKBONE} \
                        --model_name ${MODEL_NAME} \
-                       --gpu 0 1 2 3 \
+                       --gpu 0 1\
                        --data_dir ${DATA_DIR} \
                        --loss_type ${LOSS_TYPE} \
                        --max_iters ${MAX_ITERS} \

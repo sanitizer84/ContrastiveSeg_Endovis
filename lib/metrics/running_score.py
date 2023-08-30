@@ -11,7 +11,7 @@
 
 
 
-import pdb
+
 import numpy as np
 import lib.utils.distributed as dist
 
@@ -31,8 +31,8 @@ class SimpleCounterRunningScore(object):
 
     def reduce_scores(self):
         counters = np.array([self.total_count, self.correct_count])
-        if dist.is_distributed():
-            counters = dist.all_reduce_numpy(counters)
+        # if dist.is_distributed():
+        counters = dist.all_reduce_numpy(counters)
         self.reduced_counters = counters
 
     def get_mean_acc(self):
@@ -85,8 +85,8 @@ class MultiLabelRunningScore(object):
 
     def reduce_scores(self):
         counters = np.array([self.total_count, self.correct_count])
-        if dist.is_distributed():
-            counters = dist.all_reduce_numpy(counters)
+        # if dist.is_distributed():
+        counters = dist.all_reduce_numpy(counters)
         self.reduced_counters = counters
 
     def _get_scores(self):
@@ -159,10 +159,10 @@ class RunningScore(object):
             self.confusion_matrix += self._fast_hist(lt.flatten(), lp.flatten(), self.n_classes)
 
     def reduce_scores(self):
-        if dist.is_distributed():
-            hist = dist.all_reduce_numpy(self.confusion_matrix)
-        else:
-            hist = self.confusion_matrix
+        # if dist.is_distributed():
+        hist = dist.all_reduce_numpy(self.confusion_matrix)
+        # else:
+        #     hist = self.confusion_matrix
         self.reduced_confusion_matrix = hist
 
     def _get_scores(self):
@@ -191,7 +191,7 @@ class RunningScore(object):
         freq = hist.sum(axis=1) / hist.sum()
         fwavacc = (freq[freq > 0] * iu[freq > 0]).sum()
         cls_iu = dict(zip(range(self.n_classes), iu))
-
+        # print(cls_iu)
         return acc, acc_cls_list, fwavacc, mean_iu, cls_iu
 
     def get_mean_iou(self):

@@ -27,6 +27,18 @@ CV2_INTER_DICT = {
 
 class ImageHelper(object):
 
+    # duhj
+    @staticmethod
+    def cv2_read_label(label_path): 
+        label = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
+        return ImageHelper.img2np(label)
+
+    # duhj 
+    @staticmethod
+    def read_label(label_path):
+        return ImageHelper.cv2_read_label(label_path)
+
+    
     @staticmethod
     def read_image(image_path, tool='pil', mode='RGB'):
         if tool == 'pil':

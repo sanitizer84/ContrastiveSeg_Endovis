@@ -4,14 +4,14 @@
 # Modified by: RainbowSecret(yuyua@microsoft.com)
 # Select Seg Model for img segmentation.
 
-import pdb
+
 import torch
 import torch.nn as nn
 import torch.utils.checkpoint as cp
 from collections import OrderedDict
 
 from lib.models.tools.module_helper import ModuleHelper
-from lib.extensions.dcn import ModulatedDeformConv, ModulatedDeformRoIPoolingPack, DeformConv 
+from lib.extensions.dcn import ModulatedDeformConv, DeformConv 
 
 def conv3x3(in_planes, out_planes, stride=1, dilation=1):
     "3x3 convolution with padding"
