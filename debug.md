@@ -194,7 +194,7 @@ hrnet:
   ce[1, 5, 10, 10], 10000 iter,         MIOU:0.7823
   ce[1, 5, 10, 10] + lovaz, 10000 iter, MIOU:0.7828
   lovaz 0.7729  0.7748
-  contrast,                             0.7886, lr=0.00969  (contrast weight=0.1)
+  contrast,                             zas 0.7886, lr=0.00969  (contrast weight=0.1)
                                         0.8088, lr=0.00066  weight=1
   contrast_mem:                         0.7832 lr=0.009329
   
@@ -211,3 +211,9 @@ ce * contrast       0.8285
 ce + contrast       0.8209   增大了max_samples 4096, max_view 2048 效果不好
 ce + contrast       0.8380   大约是"max_samples": 1024, "max_views": 32,  max_views小一点，有助于样本数少的标签
 ce + contrast       0.8404  再次验证了mem(默认参数)性能会降低，是否和数据集有关？    "max_views": 16。如果max_view大一些，不足的像素点重复填充，性能是否会提高？
+ce*weight*0.01,+ contrast MIOU 0.6890
+ num_hard > 0 and num_easy == 0:全部用hard_indices填充， 0.7332
+ 两种为0的都要，0.7525
+                     0.7627  iter=9000
+自己构造的对比样本，0.7751  iter=14700, lr: lamda_poly=1, 0.0002; lambda_poly=0.5, iter=14700, 0.7718
+ 

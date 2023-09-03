@@ -13,7 +13,7 @@ import time
 import timeit
 # 
 import cv2
-# import scipy
+
 import collections
 import torch
 import numpy as np

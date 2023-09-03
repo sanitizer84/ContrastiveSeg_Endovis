@@ -27,7 +27,7 @@ class BasicBlock(nn.Module):
         super(BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes, momentum=bn_momentum)
-        self.relu = nn.ReLU(inplace=False)
+        self.relu = nn.ReLU(inplace=True)
         self.relu_in = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
         self.bn2 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes, momentum=bn_momentum)
@@ -65,7 +65,7 @@ class Bottleneck(nn.Module):
         self.bn2 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes, momentum=bn_momentum)
         self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
         self.bn3 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes * 4, momentum=bn_momentum)
-        self.relu = nn.ReLU(inplace=False)
+        self.relu = nn.ReLU(inplace=True)
         self.relu_in = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
@@ -109,7 +109,7 @@ class HighResolutionModule(nn.Module):
         self.branches = self._make_branches(
             num_branches, blocks, num_blocks, num_channels, bn_type=bn_type, bn_momentum=bn_momentum)
         self.fuse_layers = self._make_fuse_layers(bn_type=bn_type, bn_momentum=bn_momentum)
-        self.relu = nn.ReLU(inplace=False)
+        self.relu = nn.ReLU(inplace=True)
 
     def _check_branches(self, num_branches, blocks, num_blocks,
                         num_inchannels, num_channels):
@@ -236,7 +236,7 @@ class HighResolutionModule(nn.Module):
                                     ),
                                     ModuleHelper.BatchNorm2d(bn_type=bn_type)(num_outchannels_conv3x3,
                                                                               momentum=bn_momentum),
-                                    nn.ReLU(inplace=False)
+                                    nn.ReLU(inplace=True)
                                 )
                             )
                     fuse_layer.append(nn.Sequential(*conv3x3s))
@@ -294,7 +294,7 @@ class HighResolutionNet(nn.Module):
             self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=stem_stride, padding=1,
                                    bias=False)
             self.bn1 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(64, momentum=bn_momentum)
-            self.relu = nn.ReLU(inplace=False)
+            self.relu = nn.ReLU(inplace=True)
             self.layer1 = self._make_layer(Bottleneck, 64, 64, 4, bn_type=bn_type, bn_momentum=bn_momentum)
         else:
             stem_stride = 2
@@ -304,7 +304,7 @@ class HighResolutionNet(nn.Module):
             self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=stem_stride, padding=1,
                                    bias=False)
             self.bn2 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(64, momentum=bn_momentum)
-            self.relu = nn.ReLU(inplace=False)
+            self.relu = nn.ReLU(inplace=True)
             self.layer1 = self._make_layer(Bottleneck, 64, 64, 4, bn_type=bn_type, bn_momentum=bn_momentum)
 
         self.stage2_cfg = cfg['STAGE2']
@@ -380,7 +380,7 @@ class HighResolutionNet(nn.Module):
                           stride=2,
                           padding=1),
                 ModuleHelper.BatchNorm2d(bn_type=bn_type)(out_channels, momentum=bn_momentum),
-                nn.ReLU(inplace=False)
+                nn.ReLU(inplace=True)
             )
             downsamp_modules.append(downsamp_module)
         downsamp_modules = nn.ModuleList(downsamp_modules)
@@ -394,7 +394,7 @@ class HighResolutionNet(nn.Module):
                 padding=0
             ),
             ModuleHelper.BatchNorm2d(bn_type=bn_type)(2048, momentum=bn_momentum),
-            nn.ReLU(inplace=False)
+            nn.ReLU(inplace=True)
         )
         return incre_modules, downsamp_modules, final_layer
 
@@ -418,7 +418,7 @@ class HighResolutionNet(nn.Module):
                                 bias=False
                             ),
                             ModuleHelper.BatchNorm2d(bn_type=bn_type)(num_channels_cur_layer[i], momentum=bn_momentum),
-                            nn.ReLU(inplace=False)
+                            nn.ReLU(inplace=True)
                         )
                     )
                 else:
@@ -440,7 +440,7 @@ class HighResolutionNet(nn.Module):
                                 bias=False
                             ),
                             ModuleHelper.BatchNorm2d(bn_type=bn_type)(outchannels, momentum=bn_momentum),
-                            nn.ReLU(inplace=False)
+                            nn.ReLU(inplace=True)
                         )
                     )
                 transition_layers.append(nn.Sequential(*conv3x3s))

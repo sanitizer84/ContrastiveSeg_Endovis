@@ -9,6 +9,8 @@ import torch.nn.functional as F
 from lib.loss.loss_helper import FSCELoss, FSAuxCELoss, FSAuxRMILoss
 from lib.utils.tools.logger import Logger as Log
 
+pos_list = [None] * 8
+neg_list = [None] * 8
 
 class PixelContrastLoss(nn.Module, ABC):
     def __init__(self, configer):
@@ -23,97 +25,217 @@ class PixelContrastLoss(nn.Module, ABC):
 
         self.max_samples = self.configer.get('contrast', 'max_samples')
         self.max_views = self.configer.get('contrast', 'max_views')
+        self.cls_st = [0] * 8
         
         if self.configer.exists('loss', 'params') and 'ce_weight' in self.configer.get('loss', 'params'):
             self.weight = self.configer.get('loss', 'params')['ce_weight']
             self.weight = torch.FloatTensor(self.weight).cuda()
             Log.info('custom weights used.')
 
-    def _hard_anchor_sampling(self, X, y_hat, y):
+    # def _hard_anchor_sampling(self, X, y_hat, y):
+    #     # 这里y_hat是label， y是预测值
+    #     batch_size, feat_dim = X.shape[0], X.shape[-1]
+
+    #     classes = []
+    #     total_classes = 0
+    #     for ii in range(batch_size):
+    #         this_y = y_hat[ii]
+    #         this_classes = torch.unique(this_y) #所有clasid
+    #         this_classes = [x for x in this_classes if x != self.ignore_label]  #去掉忽略的
+    #         # ax_view是个门槛，低于此门槛的类不被计算！找出批次图像中所有数量>maxview个数的类别号clasid
+    #         this_classes = [x for x in this_classes if (this_y == x).nonzero().shape[0] > self.max_views]   
+    #         classes.append(this_classes)
+    #         total_classes += len(this_classes)
+
+    #     if total_classes == 0:
+    #         return None, None
+
+    #     n_view = min(self.max_samples//total_classes, self.max_views)
+
+    #     X_ = torch.zeros((total_classes, n_view, feat_dim), dtype=torch.float).cuda()
+    #     y_ = torch.zeros(total_classes, dtype=torch.float).cuda()
+
+    #     X_ptr = 0
+    #     for ii in range(batch_size):
+    #         # 批次里的每一张图
+    #         this_y_hat = y_hat[ii]
+    #         this_y = y[ii]
+    #         this_classes = classes[ii]
+    #         #每个类别
+    #         for cls_id in this_classes:
+    #             # nonzero函数是numpy中用于得到数组array中非零元素的位置（数组索引）的函数。
+    #             # 它的返回值是一个长度为a.ndim(数组a的轴数)的元组，元组的每个元素都是一个整数数组，
+    #             # 其值为非零元素的下标在对应轴上的值。
+                
+    #             #预测和label不一致
+    #             hard_indices = ((this_y_hat == cls_id) & (this_y != cls_id)).nonzero()  
+    #             #预测和label一致
+    #             easy_indices = ((this_y_hat == cls_id) & (this_y == cls_id)).nonzero()  
+
+    #             num_hard = hard_indices.shape[0]    #数量
+    #             num_easy = easy_indices.shape[0]
+
+    #             if num_hard >= n_view / 2 and num_easy >= n_view / 2:
+    #                 # 都大于窗口尺寸，各为窗口一半
+    #                 num_hard_keep = n_view // 2
+    #                 num_easy_keep = n_view - num_hard_keep
+    #             elif num_hard >= n_view / 2:
+    #                 # easy的少
+    #                 num_easy_keep = num_easy
+    #                 num_hard_keep = n_view - num_easy_keep
+    #             elif num_easy >= n_view / 2:
+    #                 # hard的少
+    #                 num_hard_keep = num_hard
+    #                 num_easy_keep = n_view - num_hard_keep
+    #             else:
+    #                 Log.info('this shoud be never touched! {} {} {}'.format(num_hard, num_easy, n_view))
+    #                 raise Exception
+    #             # randperm(n)：将0~n-1（包括0和n-1）随机打乱后获得的数字序列，函数名是random permutation缩写
+    #             # 此部分随机抽取要保留的那部分hard和easy像素点索引
+    #             perm = torch.randperm(num_hard)
+    #             # 打乱顺序后的前num_hard_keep个
+    #             hard_indices = hard_indices[perm[:num_hard_keep]]
+    #             perm = torch.randperm(num_easy)
+    #             # 打乱顺序后的前num_easy_keep个
+    #             easy_indices = easy_indices[perm[:num_easy_keep]]
+    #             indices = torch.cat((hard_indices, easy_indices), dim=0)
+    #             # 抽取出的像素赋值到空白矩阵作为返回值的
+    #             X_[X_ptr, :, :] = X[ii, indices, :].squeeze(1)
+    #             y_[X_ptr] = cls_id
+    #             X_ptr += 1
+    #     # 此函数的目的是取出hard和easy的anchor，即像素点作为features X_, 标签cls_id作为y_
+    #     return X_, y_
+
+    def _hard_anchor_sampling(self, X, gt, y):
+        global pos_list
         # 这里y_hat是label， y是预测值
         batch_size, feat_dim = X.shape[0], X.shape[-1]
-
         classes = []
         total_classes = 0
         for ii in range(batch_size):
-            this_y = y_hat[ii]
+            this_y = gt[ii]
             this_classes = torch.unique(this_y) #所有clasid
             this_classes = [x for x in this_classes if x != self.ignore_label]  #去掉忽略的
-            
-            #这句？？  max_view是个门槛，低于此门槛的类不被计算！
-            this_classes = [x for x in this_classes if (this_y == x).nonzero().shape[0] > self.max_views]   #label中clasid数量>max_view的
             classes.append(this_classes)
             total_classes += len(this_classes)
-        #以上找出批次图像中所有数量>maxview个数的类别号clasid
 
         if total_classes == 0:
             return None, None
 
-        n_view = self.max_samples // total_classes
+        n_view = self.max_samples//total_classes
+        easy_view = n_view // 2
+        hard_view = n_view - easy_view
         
-        n_view = min(n_view, self.max_views)
-
         X_ = torch.zeros((total_classes, n_view, feat_dim), dtype=torch.float).cuda()
         y_ = torch.zeros(total_classes, dtype=torch.float).cuda()
-
         X_ptr = 0
+
         for ii in range(batch_size):
             # 批次里的每一张图
-            this_y_hat = y_hat[ii]
+            this_gt = gt[ii]
             this_y = y[ii]
-            this_classes = classes[ii]
+            this_classe = classes[ii]
+            
             #每个类别
-            for cls_id in this_classes:
-                # nonzero函数是numpy中用于得到数组array中非零元素的位置（数组索引）的函数。
-                # 它的返回值是一个长度为a.ndim(数组a的轴数)的元组，元组的每个元素都是一个整数数组，
-                # 其值为非零元素的下标在对应轴上的值。
-                
+            for cls_id in this_classe:              
                 #预测和label不一致
-                hard_indices = ((this_y_hat == cls_id) & (this_y != cls_id)).nonzero()  
+                hard_indices = ((this_gt == cls_id) & (this_y != cls_id)).nonzero()
+                hard_indices = hard_indices.sort(1, False)[0]
                 #预测和label一致
-                easy_indices = ((this_y_hat == cls_id) & (this_y == cls_id)).nonzero()  
-
+                easy_indices = ((this_gt == cls_id) & (this_y == cls_id)).nonzero()  
+                easy_indices  = easy_indices.sort(1, False)[0]
+                
                 num_hard = hard_indices.shape[0]    #数量
                 num_easy = easy_indices.shape[0]
+                if num_hard ==0 and num_easy == 0:
+                    print('0-0')
+                    continue
+                if num_hard > 0 and num_easy > 0:
+                    # ----------------------------------------------------------------------------
+                    # 保存当前分类正确样本
+                    if pos_list[cls_id] == None:
+                        pos_list[cls_id] = easy_indices
+                    elif pos_list[cls_id].size(0) < 262144:    # 512*512
+                        pos_list[cls_id] = torch.cat((pos_list[cls_id], easy_indices), 0)
+                        pos_list[cls_id] = pos_list[cls_id].sort(1, False)[0]
+                        if pos_list[cls_id].size(0) > 131072:
+                            pos_list[cls_id] = pos_list[cls_id][:131072]
+                    # 保存当前分类错误样本        
+                    if neg_list[cls_id] == None:
+                        neg_list[cls_id] = hard_indices
+                    elif neg_list[cls_id].size(0) < 262144:    # 512*512
+                        neg_list[cls_id] = torch.cat((neg_list[cls_id], hard_indices), 0)
+                        neg_list[cls_id] = neg_list[cls_id].sort(1, False)[0]
+                        if neg_list[cls_id].size(0) > 131072:
+                            neg_list[cls_id] = neg_list[cls_id][:131072]
+                    # ----------------------------------------------------------------------------
+                    # 构建当前错误样本序列
+                    if num_hard < hard_view:
+                        tmp = hard_indices
+                        for l in range(n_view//num_hard):
+                            hard_indices = torch.cat((hard_indices, tmp), dim=0)
+                    hard_indices = hard_indices[:hard_view]
+                    # 构建当前正确样本序列
+                    if num_easy < easy_view:
+                        tmp = easy_indices
+                        for l in range(n_view//num_easy):
+                            easy_indices = torch.cat((easy_indices, tmp), dim=0)
+                    easy_indices = easy_indices[:easy_view]
+                    
+                    indices = torch.cat((hard_indices, easy_indices), dim=0)
+                    X_[X_ptr, :, :] = X[ii, indices, :].squeeze(1)
+                    
+                elif num_hard > 0 and num_easy == 0:
+                    # print('x', end='')
+                    # 构建当前错误样本序列
+                    if num_hard < hard_view:
+                        tmp = hard_indices
+                        for _ in range(hard_view//num_hard):
+                            hard_indices = torch.cat((hard_indices, tmp), dim=0)
+                    hard_indices = hard_indices[:hard_view]
+                        
+                    # 缺正确样本，从序列中取出填充
+                    if pos_list[cls_id] != None:
+                        # print('x', end='')
+                        pos_list[cls_id] = pos_list[cls_id].sort(1, False)[0]
+                        if pos_list[cls_id].size(0) > easy_view:
+                            easy_indices = pos_list[cls_id][:easy_view]
+                        else:
+                            tmp = pos_list[cls_id]
+                            for _ in range(easy_view//pos_list[cls_id].size(0)):
+                                easy_indices = torch.cat((easy_indices, tmp), dim=0)
+                            easy_indices = easy_indices[:easy_view]
+                            
+                    indices = torch.cat((hard_indices, easy_indices), dim=0)
+                    X_[X_ptr, :indices.size(0), :] = X[ii, indices, :].squeeze(1)
+                       
+                elif num_hard == 0 and num_easy >0:
+                    # 本类准确率高 构建当前正确样本序列
+                    # print('.', end='')
+                    if num_easy < n_view:
+                        tmp = easy_indices
+                        for _ in range(n_view//num_easy):
+                            easy_indices = torch.cat((easy_indices, tmp), dim=0)
+                    easy_indices = easy_indices[:easy_view]
+                    # 用准确率最低的类填充hard indices
+                    if pos_list[6] != None:
+                        tmp = pos_list[6]
+                        for l in range(hard_view//pos_list[6].size(0)):
+                            hard_indices = torch.cat((hard_indices, tmp), dim=0)
+                        hard_indices = hard_indices[:hard_view]
+                    indices = torch.cat((hard_indices, easy_indices), dim=0)
+                    X_[X_ptr, :indices.size(0), :] = X[ii, indices, :].squeeze(1)
 
-                if num_hard >= n_view / 2 and num_easy >= n_view / 2:
-                    # 都大于窗口尺寸，各为窗口一半
-                    num_hard_keep = n_view // 2
-                    num_easy_keep = n_view - num_hard_keep
-                elif num_hard >= n_view / 2:
-                    # easy的少
-                    num_easy_keep = num_easy
-                    num_hard_keep = n_view - num_easy_keep
-                elif num_easy >= n_view / 2:
-                    # hard的少
-                    num_hard_keep = num_hard
-                    num_easy_keep = n_view - num_hard_keep
-                else:
-                    Log.info('this shoud be never touched! {} {} {}'.format(num_hard, num_easy, n_view))
-                    raise Exception
-                # randperm(n)：将0~n-1（包括0和n-1）随机打乱后获得的数字序列，函数名是random permutation缩写
-                # 此部分随机抽取要保留的那部分hard和easy像素点索引
-                perm = torch.randperm(num_hard)
-                # 打乱顺序后的前num_hard_keep个
-                hard_indices = hard_indices[perm[:num_hard_keep]]
-                perm = torch.randperm(num_easy)
-                # 打乱顺序后的前num_easy_keep个
-                easy_indices = easy_indices[perm[:num_easy_keep]]
-                indices = torch.cat((hard_indices, easy_indices), dim=0)
-                # 抽取出的像素赋值到空白矩阵作为返回值的
-                X_[X_ptr, :, :] = X[ii, indices, :].squeeze(1)
                 y_[X_ptr] = cls_id
                 X_ptr += 1
-        # 此函数的目的是取出hard和easy的anchor，即像素点作为features X_, 标签cls_id作为y_
+
         return X_, y_
-
-
 
     def _contrastive(self, features_, labels_):
         anchor_num, n_view = features_.shape[0], features_.shape[1]
 
         labels_ = labels_.contiguous().view(-1, 1)
-        # 构造混淆矩阵？
+        # 转置后相等的坐标就是预测正确的
         mask = torch.eq(labels_, torch.transpose(labels_, 0, 1)).float().cuda()
         contrast_count = n_view
         contrast_feature = torch.cat(torch.unbind(features_, dim=1), dim=0)
@@ -205,47 +327,7 @@ class ContrastCELoss(nn.Module, ABC):
         loss_contrast = self.contrast_criterion(embedding, target, predict)
 
         if with_embed is True:
-            return loss + self.loss_weight * loss_contrast
+            return 0.01 * loss + self.loss_weight * loss_contrast
 
         return loss + 0 * loss_contrast  # just a trick to avoid errors in distributed training
     
-
-
-class ContrastAuxCELoss(nn.Module, ABC):
-    def __init__(self, configer=None):
-        super(ContrastAuxCELoss, self).__init__()
-
-        self.configer = configer
-
-        ignore_index = -1
-        if self.configer.exists('loss', 'params') and 'ce_ignore_index' in self.configer.get('loss', 'params'):
-            ignore_index = self.configer.get('loss', 'params')['ce_ignore_index']
-        Log.info('ignore_index: {}'.format(ignore_index))
-
-        self.loss_weight = self.configer.get('contrast', 'loss_weight')
-        self.use_rmi = self.configer.get('contrast', 'use_rmi')
-        self.seg_criterion = FSAuxCELoss(configer=configer)
-        self.contrast_criterion = PixelContrastLoss(configer=configer)
-
-    def forward(self, preds, target, with_embed=False):
-        h, w = target.size(1), target.size(2)
-
-        assert "seg" in preds
-        assert "seg_aux" in preds
-        assert "embed" in preds
-
-        seg = preds['seg']
-        seg_aux = preds['seg_aux']
-        embedding = preds['embed']
-
-        pred = F.interpolate(input=seg, size=(h, w), mode='bilinear', align_corners=True)
-        pred_aux = F.interpolate(input=seg_aux, size=(h, w), mode='bilinear', align_corners=True)
-        loss = self.seg_criterion([pred_aux, pred], target)
-
-        _, predict = torch.max(seg, 1)
-        loss_contrast = self.contrast_criterion(embedding, target, predict)
-
-        if with_embed is True:
-            return loss + self.loss_weight * loss_contrast
-
-        return loss + 0 * loss_contrast  # just a trick to avoid errors in distributed training

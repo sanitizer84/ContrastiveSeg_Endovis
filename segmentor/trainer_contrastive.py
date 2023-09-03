@@ -167,11 +167,6 @@ class Trainer(object):
         cudnn.benchmark = True
 
         for _, data_dict in enumerate(self.train_loader):
-            if self.configer.get('lr', 'is_warm'):
-                self.module_runner.warm_lr(self.configer.get('iters'),
-                    self.scheduler, 
-                    self.optimizer, 
-                    backbone_list=[0, ])
                 
             (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
 

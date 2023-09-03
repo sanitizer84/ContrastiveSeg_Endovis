@@ -40,7 +40,7 @@ class BasicBlock(nn.Module):
         super(BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride, dilation)
         self.bn1 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes)
-        self.relu = nn.ReLU(inplace=False)
+        self.relu = nn.ReLU(inplace=True)
         self.relu_in = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
         self.bn2 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes)
@@ -147,7 +147,7 @@ class Bottleneck(nn.Module):
         self.conv3 = nn.Conv2d(
             planes, planes * self.expansion, kernel_size=1, bias=False)
         self.bn3 = ModuleHelper.BatchNorm2d(bn_type=bn_type)(planes * self.expansion)
-        self.relu = nn.ReLU(inplace=False)
+        self.relu = nn.ReLU(inplace=True)
         self.relu_in = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
@@ -294,19 +294,19 @@ class DCNResNet(nn.Module):
             self.resinit = nn.Sequential(OrderedDict([
                 ('conv1', nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1, bias=False)),
                 ('bn1', ModuleHelper.BatchNorm2d(bn_type=bn_type)(64)),
-                ('relu1', nn.ReLU(inplace=False)),
+                ('relu1', nn.ReLU(inplace=True)),
                 ('conv2', nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=False)),
                 ('bn2', ModuleHelper.BatchNorm2d(bn_type=bn_type)(64)),
-                ('relu2', nn.ReLU(inplace=False)),
+                ('relu2', nn.ReLU(inplace=True)),
                 ('conv3', nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1, bias=False)),
                 ('bn3', ModuleHelper.BatchNorm2d(bn_type=bn_type)(self.inplanes)),
-                ('relu3', nn.ReLU(inplace=False))]
+                ('relu3', nn.ReLU(inplace=True))]
             ))
         else:
             self.resinit = nn.Sequential(OrderedDict([
                 ('conv1', nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)),
                 ('bn1', ModuleHelper.BatchNorm2d(bn_type=bn_type)(self.inplanes)),
-                ('relu1', nn.ReLU(inplace=False))]
+                ('relu1', nn.ReLU(inplace=True))]
             ))
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 

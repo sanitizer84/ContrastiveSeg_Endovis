@@ -5,11 +5,6 @@ import torch.nn.functional as F
 from torch.autograd.function import once_differentiable
 
 from lib.extensions.cc_attention import _ext
-# from . import _ext
-
-
-# from libs import InPlaceABN, InPlaceABNSync
-# BatchNorm2d = functools.partial(InPlaceABNSync, activation='none')
 
 
 def _check_contiguous(*args):
