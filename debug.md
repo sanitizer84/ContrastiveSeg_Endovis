@@ -215,5 +215,7 @@ ce*weight*0.01,+ contrast MIOU 0.6890
  num_hard > 0 and num_easy == 0:全部用hard_indices填充， 0.7332
  两种为0的都要，0.7525
                      0.7627  iter=9000
-自己构造的对比样本，0.7751  iter=14700, lr: lamda_poly=1, 0.0002; lambda_poly=0.5, iter=14700, 0.7718
+自己构造的对比样本：
+0.7751  iter=14700, lamda_poly=1, 0.0002;
+0.7718  iter=14700, lambda_poly=0.5, 
  

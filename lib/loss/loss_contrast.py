@@ -140,92 +140,82 @@ class PixelContrastLoss(nn.Module, ABC):
             for cls_id in this_classe:              
                 #预测和label不一致
                 hard_indices = ((this_gt == cls_id) & (this_y != cls_id)).nonzero()
-                hard_indices = hard_indices.sort(1, False)[0]
                 #预测和label一致
-                easy_indices = ((this_gt == cls_id) & (this_y == cls_id)).nonzero()  
-                easy_indices  = easy_indices.sort(1, False)[0]
-                
+                easy_indices = ((this_gt == cls_id) & (this_y == cls_id)).nonzero()         
                 num_hard = hard_indices.shape[0]    #数量
                 num_easy = easy_indices.shape[0]
-                if num_hard ==0 and num_easy == 0:
-                    print('0-0')
-                    continue
-                if num_hard > 0 and num_easy > 0:
-                    # ----------------------------------------------------------------------------
-                    # 保存当前分类正确样本
-                    if pos_list[cls_id] == None:
-                        pos_list[cls_id] = easy_indices
-                    elif pos_list[cls_id].size(0) < 262144:    # 512*512
-                        pos_list[cls_id] = torch.cat((pos_list[cls_id], easy_indices), 0)
-                        pos_list[cls_id] = pos_list[cls_id].sort(1, False)[0]
-                        if pos_list[cls_id].size(0) > 131072:
-                            pos_list[cls_id] = pos_list[cls_id][:131072]
-                    # 保存当前分类错误样本        
-                    if neg_list[cls_id] == None:
-                        neg_list[cls_id] = hard_indices
-                    elif neg_list[cls_id].size(0) < 262144:    # 512*512
-                        neg_list[cls_id] = torch.cat((neg_list[cls_id], hard_indices), 0)
-                        neg_list[cls_id] = neg_list[cls_id].sort(1, False)[0]
-                        if neg_list[cls_id].size(0) > 131072:
-                            neg_list[cls_id] = neg_list[cls_id][:131072]
-                    # ----------------------------------------------------------------------------
+                
+                # 保存当前分类正确样本
+                if pos_list[cls_id] == None:
+                    pos_list[cls_id] = easy_indices
+                elif pos_list[cls_id].size(0) < 262144:    # 512*512
+                    pos_list[cls_id] = torch.cat((pos_list[cls_id], easy_indices), 0)
+                else:
+                    pos_list[cls_id] = pos_list[cls_id][:10]
+                # 保存当前分类错误样本        
+                if neg_list[cls_id] == None:
+                    neg_list[cls_id] = hard_indices
+                elif neg_list[cls_id].size(0) < 262144:    # 512*512
+                    neg_list[cls_id] = torch.cat((neg_list[cls_id], hard_indices), 0)
+                else:
+                    neg_list[cls_id] = neg_list[cls_id][10]
+                    
+                if num_hard > 0 and num_easy > 0:                        
                     # 构建当前错误样本序列
-                    if num_hard < hard_view:
-                        tmp = hard_indices
-                        for l in range(n_view//num_hard):
-                            hard_indices = torch.cat((hard_indices, tmp), dim=0)
-                    hard_indices = hard_indices[:hard_view]
+                    if num_hard < hard_view:                      
+                        hard_indices = hard_indices.repeat(hard_view//num_hard, 1)
+                    else:
+                        perm = torch.randperm(num_hard)
+                        hard_indices = hard_indices[perm[:hard_view]]
                     # 构建当前正确样本序列
                     if num_easy < easy_view:
-                        tmp = easy_indices
-                        for l in range(n_view//num_easy):
-                            easy_indices = torch.cat((easy_indices, tmp), dim=0)
-                    easy_indices = easy_indices[:easy_view]
-                    
-                    indices = torch.cat((hard_indices, easy_indices), dim=0)
-                    X_[X_ptr, :, :] = X[ii, indices, :].squeeze(1)
+                        easy_indices = easy_indices.repeat(easy_view//num_easy, 1)
+                    else:
+                        perm = torch.randperm(num_easy)
+                        easy_indices = easy_indices[perm[:easy_view]]
                     
                 elif num_hard > 0 and num_easy == 0:
                     # print('x', end='')
                     # 构建当前错误样本序列
                     if num_hard < hard_view:
-                        tmp = hard_indices
-                        for _ in range(hard_view//num_hard):
-                            hard_indices = torch.cat((hard_indices, tmp), dim=0)
-                    hard_indices = hard_indices[:hard_view]
-                        
+                        hard_indices = hard_indices.repeat(hard_view//num_hard, 1)
+                    else:
+                        perm = torch.randperm(num_hard)
+                        hard_indices = hard_indices[perm[:hard_view]]  
+                           
                     # 缺正确样本，从序列中取出填充
-                    if pos_list[cls_id] != None:
+                    # if pos_list[cls_id] != None:
+                    #     # print('x', end='')
+                    #     if pos_list[cls_id].size(0) < easy_view:
+                    #         easy_indices = pos_list[cls_id].repeat(easy_view//pos_list[cls_id].size(0) , 1)
+                    #     else:
+                    #         perm = torch.randperm(pos_list[cls_id].size(0) )
+                    #         easy_indices = pos_list[cls_id][perm[:easy_view]]       
+                    if len(pos_list[cls_id]) > 0:
                         # print('x', end='')
-                        pos_list[cls_id] = pos_list[cls_id].sort(1, False)[0]
-                        if pos_list[cls_id].size(0) > easy_view:
-                            easy_indices = pos_list[cls_id][:easy_view]
+                        if pos_list[cls_id].size(0) < easy_view:
+                            easy_indices = pos_list[cls_id].repeat(easy_view//pos_list[cls_id].size(0) , 1)
                         else:
-                            tmp = pos_list[cls_id]
-                            for _ in range(easy_view//pos_list[cls_id].size(0)):
-                                easy_indices = torch.cat((easy_indices, tmp), dim=0)
-                            easy_indices = easy_indices[:easy_view]
-                            
-                    indices = torch.cat((hard_indices, easy_indices), dim=0)
-                    X_[X_ptr, :indices.size(0), :] = X[ii, indices, :].squeeze(1)
+                            perm = torch.randperm(pos_list[cls_id].size(0) )
+                            easy_indices = pos_list[cls_id][perm[:easy_view]]                   
                        
                 elif num_hard == 0 and num_easy >0:
                     # 本类准确率高 构建当前正确样本序列
                     # print('.', end='')
                     if num_easy < n_view:
-                        tmp = easy_indices
-                        for _ in range(n_view//num_easy):
-                            easy_indices = torch.cat((easy_indices, tmp), dim=0)
+                        easy_indices = easy_indices.repeat(easy_view//num_easy, 1)
                     easy_indices = easy_indices[:easy_view]
-                    # 用准确率最低的类填充hard indices
+                    # 用准确率最低的类之前，标签正确预测正确的数据填充hard indices
                     if pos_list[6] != None:
-                        tmp = pos_list[6]
-                        for l in range(hard_view//pos_list[6].size(0)):
-                            hard_indices = torch.cat((hard_indices, tmp), dim=0)
-                        hard_indices = hard_indices[:hard_view]
-                    indices = torch.cat((hard_indices, easy_indices), dim=0)
-                    X_[X_ptr, :indices.size(0), :] = X[ii, indices, :].squeeze(1)
-
+                        len_p = pos_list[6].size(0)
+                        if len_p < hard_view:
+                            hard_indices = pos_list[6].repeat(hard_view//len_p, 1)
+                        else:
+                            perm = torch.randperm(len_p)
+                            hard_indices = pos_list[6][perm[:hard_view]]
+                        
+                indices = torch.cat((hard_indices, easy_indices), dim=0)
+                X_[X_ptr, :indices.size(0), :] = X[ii, indices, :].squeeze(1)
                 y_[X_ptr] = cls_id
                 X_ptr += 1
 
