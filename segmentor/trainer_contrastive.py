@@ -165,34 +165,43 @@ class Trainer(object):
         self.pixel_loss.train()
         start_time = time.time()
         cudnn.benchmark = True
-
+        scaler = torch.cuda.amp.GradScaler()
+        
         for _, data_dict in enumerate(self.train_loader):
                 
             (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
 
-            if self.with_memory:
-                outputs = self.seg_net(*inputs, targets, with_embed=True)
-                outputs['pixel_queue'] = self.seg_net.module.pixel_queue
-                outputs['pixel_queue_ptr'] = self.seg_net.module.pixel_queue_ptr
-                outputs['segment_queue'] = self.seg_net.module.segment_queue
-                outputs['segment_queue_ptr'] = self.seg_net.module.segment_queue_ptr
-            else:
-                outputs = self.seg_net(*inputs, with_embed=True)
+            # if self.with_memory:
+            #     outputs = self.seg_net(*inputs, targets, with_embed=True)
+            #     outputs['pixel_queue'] = self.seg_net.module.pixel_queue
+            #     outputs['pixel_queue_ptr'] = self.seg_net.module.pixel_queue_ptr
+            #     outputs['segment_queue'] = self.seg_net.module.segment_queue
+            #     outputs['segment_queue_ptr'] = self.seg_net.module.segment_queue_ptr
+            # else:
+            #     outputs = self.seg_net(*inputs, with_embed=True)
 
-            backward_loss = self.pixel_loss(outputs, targets, with_embed=True)
-            display_loss = reduce_tensor(backward_loss) / world_size
+            # backward_loss = self.pixel_loss(outputs, targets, with_embed=True)
+            # display_loss = reduce_tensor(backward_loss) / world_size
 
-            if self.with_memory and 'key' in outputs and 'lb_key' in outputs:
-                self._dequeue_and_enqueue(outputs['key'], outputs['lb_key'],
-                                          segment_queue=self.seg_net.module.segment_queue,
-                                          segment_queue_ptr=self.seg_net.module.segment_queue_ptr,
-                                          pixel_queue=self.seg_net.module.pixel_queue,
-                                          pixel_queue_ptr=self.seg_net.module.pixel_queue_ptr)
+            # if self.with_memory and 'key' in outputs and 'lb_key' in outputs:
+            #     self._dequeue_and_enqueue(outputs['key'], outputs['lb_key'],
+            #                               segment_queue=self.seg_net.module.segment_queue,
+            #                               segment_queue_ptr=self.seg_net.module.segment_queue_ptr,
+            #                               pixel_queue=self.seg_net.module.pixel_queue,
+            #                               pixel_queue_ptr=self.seg_net.module.pixel_queue_ptr)
 
-            self.train_losses.update(display_loss.item(), batch_size)
             self.optimizer.zero_grad()
-            backward_loss.backward()
-            self.optimizer.step()
+            with torch.cuda.amp.autocast():
+                outputs = self.seg_net(*inputs, with_embed=True)
+                backward_loss = self.pixel_loss(outputs, targets, with_embed=True)
+                display_loss = reduce_tensor(backward_loss) / world_size
+            scaler.scale(backward_loss).backward()
+            scaler.step(self.optimizer)
+            scaler.update()
+            self.train_losses.update(display_loss.item(), batch_size)
+            
+            # backward_loss.backward()
+            # self.optimizer.step()
             
             # duhj
             self.scheduler.step()

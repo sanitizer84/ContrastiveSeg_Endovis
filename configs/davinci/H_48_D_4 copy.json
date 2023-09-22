@@ -1,5 +1,5 @@
 {
-    "dataset": "davinci",
+    "dataset": "davinci_1",
     "method": "fcn_segmentor",
     "data": {
       "image_tool": "cv2",
@@ -86,7 +86,7 @@
     "logging": {
       "logfile_level": "info",
       "stdout_level": "info",
-      "log_file": "",
+      "log_file": "log/hrnet48d4_train.log",
       "log_format": "",
       "rewrite": true
     },
@@ -101,12 +101,12 @@
       "lambda_poly":{
         "power": 0.6
       },
-      "warm_iters":0,      
+      "warm_iters":0,
       "freeze_backbone":false
     },
     "solver": {
-      "display_iter": 2085,
-      "test_interval": 2085,
+      "display_iter": 2235,
+      "test_interval": 2235,
       "max_iters": 3000
     },
     "optim": {
@@ -146,14 +146,10 @@
       "proj_dim": 256,
       "temperature": 0.2,
       "base_temperature": 0.07,
-      "max_samples": 2048,
-      "max_views": 16,
+      "max_samples": 8000,
+      "max_views": 32,
       "stride": 8,
       "loss_weight": 1,
-      "use_rmi": false,
-      "use_lovasz": false,
-      "with_memory": true,
-      "memory_size": 5000,
-      "pixel_update_freq": 10
+      "use_rmi": false
     }
 }

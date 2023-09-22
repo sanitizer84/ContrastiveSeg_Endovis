@@ -22,7 +22,7 @@ echo "Logging to $LOG_FILE"
 mkdir -p `dirname $LOG_FILE`
 
 PRETRAINED_MODEL="${P_PATH}/pretrained_model/hrnetv2_w48_imagenet_pretrained.pth"
-MAX_ITERS=3000
+MAX_ITERS=30000
 BATCH_SIZE=8
 BASE_LR=0.01
 

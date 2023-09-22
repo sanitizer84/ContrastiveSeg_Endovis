@@ -1,12 +1,12 @@
 {
-    "dataset": "davinci_1",
+    "dataset": "davinci",
     "method": "fcn_segmentor",
     "data": {
       "image_tool": "cv2",
       "input_mode": "BGR",
-      "num_classes": 8,
+      "num_classes": 9,
       "label_ready": true,
-      "label_class_ids": [0, 1, 2, 3, 4, 5, 6, 7],
+      "label_class_ids": [1, 2, 3, 4, 6, 7, 8, 10, 11],
       "data_dir": "",
       "workers": 8
     },
@@ -99,14 +99,14 @@
         "step_size": 100
       },
       "lambda_poly":{
-        "power": 0.9
+        "power": 0.8
       },
       "warm_iters":0,
       "freeze_backbone":false
     },
     "solver": {
-      "display_iter": 300,
-      "test_interval": 300,
+      "display_iter": 2235,
+      "test_interval": 2235,
       "max_iters": 3000
     },
     "optim": {
@@ -125,25 +125,16 @@
     "loss": {
       "loss_type": "fs_ce_loss",
       "params": {
-        "ce_weight":
-        [0.40006584,
-        0.9153615,
-        0.960438,
-        0.9780319,
-        0.8489695,
-        0.904349,
-        0.99622023,
-        0.9965638],
         "ce_reduction": "mean",
         "ce_ignore_index": -1
       }
     },
     "contrast": {
       "proj_dim": 256,
-      "temperature": 0.07,
+      "temperature": 0.2,
       "base_temperature": 0.07,
-      "max_samples": 8192,
-      "max_views": 16,
+      "max_samples": 6000,
+      "max_views": 32,
       "stride": 8,
       "loss_weight": 1,
       "use_rmi": false

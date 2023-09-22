@@ -59,7 +59,7 @@ class ModuleRunner(object):
             net,
             device_ids=[local_rank],
             output_device=local_rank,
-            # find_unused_parameters=True       #duhj
+            find_unused_parameters=True       #duhj
         )
 
         # if len(self.configer.get('gpu')) == 1:
@@ -69,7 +69,7 @@ class ModuleRunner(object):
 
     def load_net(self, net):
         net = self.to_device(net)
-        net = self._make_parallel(net)
+        # net = self._make_parallel(net)
 
         net.float()
         # 读取保存的模型参数
@@ -77,7 +77,7 @@ class ModuleRunner(object):
             Log.info('Loading checkpoint from {}...'.format(self.configer.get('network', 'resume')))
 
             # print (os.getcwd())#获得当前目录
-            print(os.path.join(os.getcwd(), self.configer.get('network', 'resume')))
+            # print(os.path.join(os.getcwd(), self.configer.get('network', 'resume')))
             resume_dict = torch.load(
                 os.path.join(os.getcwd(), self.configer.get('network', 'resume')), 
                 map_location=lambda storage, loc: storage

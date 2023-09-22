@@ -1,16 +1,17 @@
-
-
 from abc import ABC
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from lib.loss.loss_helper import FSCELoss, FSAuxCELoss, FSAuxRMILoss
+from lib.loss.loss_helper import FSCELoss#, FSAuxRMILoss
 from lib.utils.tools.logger import Logger as Log
 
-pos_list = [None] * 8
-neg_list = [None] * 8
+
+def add_samples(sample_list, id, newdata):
+    if sample_list[id] is None:
+        sample_list[id] = newdata
+    else:
+        sample_list[id] = torch.cat((sample_list[id], newdata), 0)[-65536:-1]
 
 class PixelContrastLoss(nn.Module, ABC):
     def __init__(self, configer):
@@ -22,16 +23,93 @@ class PixelContrastLoss(nn.Module, ABC):
         self.ignore_label = -1
         if self.configer.exists('loss', 'params') and 'ce_ignore_index' in self.configer.get('loss', 'params'):
             self.ignore_label = self.configer.get('loss', 'params')['ce_ignore_index']
-
         self.max_samples = self.configer.get('contrast', 'max_samples')
-        self.max_views = self.configer.get('contrast', 'max_views')
-        self.cls_st = [0] * 8
-        
-        if self.configer.exists('loss', 'params') and 'ce_weight' in self.configer.get('loss', 'params'):
-            self.weight = self.configer.get('loss', 'params')['ce_weight']
-            self.weight = torch.FloatTensor(self.weight).cuda()
-            Log.info('custom weights used.')
+        self.max_views = 32
+        self.pos_list = [None] * 9
+        self.neg_list = [None] * 9
 
+
+    def _hard_anchor_sampling(self, X, gt, y):
+        # 这里gt是标签， y是预测值
+        batch_size, feat_dim = X.shape[0], X.shape[-1]
+        classes = []
+        total_classes = 0
+        for ii in range(batch_size):
+            this_classes = torch.unique(gt[ii]) #所有clasid
+            classes.append([x for x in this_classes if x != self.ignore_label])     #去掉忽略的类
+            total_classes += len(this_classes)
+
+        if total_classes == 0:
+            return None, None
+
+        n_view = self.max_samples//total_classes
+        easy_view = n_view // 2
+        hard_view = n_view - easy_view
+        
+        X_ = torch.zeros((total_classes, n_view, feat_dim), dtype=torch.float).cuda()
+        y_ = torch.zeros(total_classes, dtype=torch.float).cuda()
+        X_ptr = 0
+
+        for ii in range(batch_size):
+            # 批次里的每一张图
+            this_gt = gt[ii]
+            this_y = y[ii]          
+            for cls_id in classes[ii]:       #每张图中所有类别       
+                #预测和label不一致
+                hard_indices = ((this_gt == cls_id) & (this_y != cls_id)).nonzero()
+                #预测和label一致
+                easy_indices = ((this_gt == cls_id) & (this_y == cls_id)).nonzero()         
+                num_hard, num_easy = hard_indices.shape[0], easy_indices.shape[0]    #数量
+                if num_hard > 0 and num_easy > 0:
+                                     
+                    if 0 < num_hard < hard_view:                    # 构建当前错误样本序列  
+                        hard_indices = hard_indices.repeat(hard_view//num_hard, 1)
+                    else:
+                        hard_indices = hard_indices[torch.randperm(num_hard)[:hard_view]]       
+                    if 0 < num_easy < easy_view:                    # 构建当前正确样本序列
+                        easy_indices = easy_indices.repeat(easy_view//num_easy, 1)
+                    else:
+                        easy_indices = easy_indices[torch.randperm(num_easy)[:easy_view]]
+                elif num_hard > 0 and num_easy == 0:
+                    if num_hard < hard_view:                        # 构建当前错误样本序列
+                        hard_indices = hard_indices.repeat(hard_view//num_hard, 1)
+                    else:
+                        hard_indices = hard_indices[torch.randperm(num_hard)[:hard_view]]      
+                    if self.pos_list[cls_id] != None:                    # 缺正确样本，从序列中取出填充
+                        # print('x', end='')
+                        if 0 < self.pos_list[cls_id].size(0) < easy_view:
+                            easy_indices = self.pos_list[cls_id].repeat(easy_view//self.pos_list[cls_id].size(0) , 1)
+                        else:
+                            easy_indices = self.pos_list[cls_id][torch.randperm(num_easy)[:easy_view]]    
+                elif num_hard == 0 and num_easy >0:     
+                    # add_samples(self.pos_list, cls_id, easy_indices)     # 保存当前分类正确样本  
+                    if 0 < num_easy < easy_view:                    # 构建当前正确样本序列
+                        easy_indices = easy_indices.repeat(easy_view//num_easy, 1)
+                    else:
+                        easy_indices = easy_indices[torch.randperm(num_easy)[:easy_view]]
+                    # 用准确率最低的类之前，标签正确预测正确的数据填充hard indices
+                    if self.pos_list[8] != None:
+                        len_p = self.pos_list[8].size(0)
+                        if 0 < len_p < hard_view:
+                            hard_indices = self.pos_list[8].repeat(hard_view//len_p, 1)
+                        else:
+                            perm = torch.randperm(num_hard)
+                            hard_indices = self.pos_list[8][perm[:hard_view]]
+
+                add_samples(self.pos_list, cls_id, easy_indices)     # 保存当前分类正确样本   
+                add_samples(self.neg_list, cls_id, hard_indices)     # 保存当前分类错误样本 
+                        
+                indices = torch.cat((hard_indices, easy_indices), dim=0)
+                X_[X_ptr, :indices.size(0), :] = X[ii, indices, :].squeeze(1)
+                y_[X_ptr] = cls_id
+                X_ptr += 1
+        return X_, y_
+    
+    
+  
+    
+    
+    
     # def _hard_anchor_sampling(self, X, y_hat, y):
     #     # 这里y_hat是label， y是预测值
     #     batch_size, feat_dim = X.shape[0], X.shape[-1]
@@ -105,121 +183,9 @@ class PixelContrastLoss(nn.Module, ABC):
     #             X_ptr += 1
     #     # 此函数的目的是取出hard和easy的anchor，即像素点作为features X_, 标签cls_id作为y_
     #     return X_, y_
+    
+    
 
-    def _hard_anchor_sampling(self, X, gt, y):
-        global pos_list
-        # 这里y_hat是label， y是预测值
-        batch_size, feat_dim = X.shape[0], X.shape[-1]
-        classes = []
-        total_classes = 0
-        for ii in range(batch_size):
-            this_y = gt[ii]
-            this_classes = torch.unique(this_y) #所有clasid
-            this_classes = [x for x in this_classes if x != self.ignore_label]  #去掉忽略的
-            classes.append(this_classes)
-            total_classes += len(this_classes)
-
-        if total_classes == 0:
-            return None, None
-
-        n_view = self.max_samples//total_classes
-        easy_view = n_view // 2
-        hard_view = n_view - easy_view
-        
-        X_ = torch.zeros((total_classes, n_view, feat_dim), dtype=torch.float).cuda()
-        y_ = torch.zeros(total_classes, dtype=torch.float).cuda()
-        X_ptr = 0
-
-        for ii in range(batch_size):
-            # 批次里的每一张图
-            this_gt = gt[ii]
-            this_y = y[ii]
-            this_classe = classes[ii]
-            
-            #每个类别
-            for cls_id in this_classe:              
-                #预测和label不一致
-                hard_indices = ((this_gt == cls_id) & (this_y != cls_id)).nonzero()
-                #预测和label一致
-                easy_indices = ((this_gt == cls_id) & (this_y == cls_id)).nonzero()         
-                num_hard = hard_indices.shape[0]    #数量
-                num_easy = easy_indices.shape[0]
-                
-                # 保存当前分类正确样本
-                if pos_list[cls_id] == None:
-                    pos_list[cls_id] = easy_indices
-                elif pos_list[cls_id].size(0) < 262144:    # 512*512
-                    pos_list[cls_id] = torch.cat((pos_list[cls_id], easy_indices), 0)
-                else:
-                    pos_list[cls_id] = pos_list[cls_id][:10]
-                # 保存当前分类错误样本        
-                if neg_list[cls_id] == None:
-                    neg_list[cls_id] = hard_indices
-                elif neg_list[cls_id].size(0) < 262144:    # 512*512
-                    neg_list[cls_id] = torch.cat((neg_list[cls_id], hard_indices), 0)
-                else:
-                    neg_list[cls_id] = neg_list[cls_id][10]
-                    
-                if num_hard > 0 and num_easy > 0:                        
-                    # 构建当前错误样本序列
-                    if num_hard < hard_view:                      
-                        hard_indices = hard_indices.repeat(hard_view//num_hard, 1)
-                    else:
-                        perm = torch.randperm(num_hard)
-                        hard_indices = hard_indices[perm[:hard_view]]
-                    # 构建当前正确样本序列
-                    if num_easy < easy_view:
-                        easy_indices = easy_indices.repeat(easy_view//num_easy, 1)
-                    else:
-                        perm = torch.randperm(num_easy)
-                        easy_indices = easy_indices[perm[:easy_view]]
-                    
-                elif num_hard > 0 and num_easy == 0:
-                    # print('x', end='')
-                    # 构建当前错误样本序列
-                    if num_hard < hard_view:
-                        hard_indices = hard_indices.repeat(hard_view//num_hard, 1)
-                    else:
-                        perm = torch.randperm(num_hard)
-                        hard_indices = hard_indices[perm[:hard_view]]  
-                           
-                    # 缺正确样本，从序列中取出填充
-                    # if pos_list[cls_id] != None:
-                    #     # print('x', end='')
-                    #     if pos_list[cls_id].size(0) < easy_view:
-                    #         easy_indices = pos_list[cls_id].repeat(easy_view//pos_list[cls_id].size(0) , 1)
-                    #     else:
-                    #         perm = torch.randperm(pos_list[cls_id].size(0) )
-                    #         easy_indices = pos_list[cls_id][perm[:easy_view]]       
-                    if len(pos_list[cls_id]) > 0:
-                        # print('x', end='')
-                        if pos_list[cls_id].size(0) < easy_view:
-                            easy_indices = pos_list[cls_id].repeat(easy_view//pos_list[cls_id].size(0) , 1)
-                        else:
-                            perm = torch.randperm(pos_list[cls_id].size(0) )
-                            easy_indices = pos_list[cls_id][perm[:easy_view]]                   
-                       
-                elif num_hard == 0 and num_easy >0:
-                    # 本类准确率高 构建当前正确样本序列
-                    # print('.', end='')
-                    if num_easy < n_view:
-                        easy_indices = easy_indices.repeat(easy_view//num_easy, 1)
-                    easy_indices = easy_indices[:easy_view]
-                    # 用准确率最低的类之前，标签正确预测正确的数据填充hard indices
-                    if pos_list[6] != None:
-                        len_p = pos_list[6].size(0)
-                        if len_p < hard_view:
-                            hard_indices = pos_list[6].repeat(hard_view//len_p, 1)
-                        else:
-                            perm = torch.randperm(len_p)
-                            hard_indices = pos_list[6][perm[:hard_view]]
-                        
-                indices = torch.cat((hard_indices, easy_indices), dim=0)
-                X_[X_ptr, :indices.size(0), :] = X[ii, indices, :].squeeze(1)
-                y_[X_ptr] = cls_id
-                X_ptr += 1
-
-        return X_, y_
 
     def _contrastive(self, features_, labels_):
         anchor_num, n_view = features_.shape[0], features_.shape[1]
@@ -294,11 +260,7 @@ class ContrastCELoss(nn.Module, ABC):
 
         self.loss_weight = self.configer.get('contrast', 'loss_weight')
         self.use_rmi = self.configer.get('contrast', 'use_rmi')
-        if self.use_rmi:
-            self.seg_criterion = FSAuxRMILoss(configer=configer)
-        else:
-            self.seg_criterion = FSCELoss(configer=configer)
-
+        self.seg_criterion = FSCELoss(configer=configer)
         self.contrast_criterion = PixelContrastLoss(configer=configer)
 
     def forward(self, preds, target, with_embed=False):
@@ -317,7 +279,8 @@ class ContrastCELoss(nn.Module, ABC):
         loss_contrast = self.contrast_criterion(embedding, target, predict)
 
         if with_embed is True:
-            return 0.01 * loss + self.loss_weight * loss_contrast
+            return loss + self.loss_weight * loss_contrast
+        
 
         return loss + 0 * loss_contrast  # just a trick to avoid errors in distributed training
     

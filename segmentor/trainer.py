@@ -143,7 +143,7 @@ class Trainer(object):
         self.seg_net.train()
         self.pixel_loss.train()
         start_time = time.time()
-        scaler = torch.cuda.amp.GradScaler()
+        # scaler = torch.cuda.amp.GradScaler()
 
         # start training
         for i, data_dict in enumerate(self.train_loader):
@@ -161,10 +161,14 @@ class Trainer(object):
                 backward_loss = loss
                 display_loss = reduce_tensor(backward_loss) / world_size
 
-            # self.train_losses.update(display_loss.item(), batch_size)
-            scaler.scale(backward_loss).backward()
-            scaler.step(self.optimizer)
-            scaler.update()
+            self.train_losses.update(display_loss.item(), batch_size)
+            # scaler.scale(backward_loss).backward()
+            # scaler.step(self.optimizer)
+            # scaler.update()
+            
+            self.optimizer.zero_grad()
+            backward_loss.backward()
+            self.optimizer.step()
             
             # Update the vars of the train phase.
             self.batch_time.update(time.time() - start_time)

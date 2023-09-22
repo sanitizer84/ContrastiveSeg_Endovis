@@ -81,7 +81,7 @@ class _BaseEvaluator:
             max_perf = self.configer.get('max_performance')
             self.configer.update(['performance'], perf)
             if perf > max_perf and  get_rank() == 0:
-                Log.info('Performance {} -> {}'.format(max_perf, perf))
+                Log.info('Performance {} --> {}'.format(max_perf, perf))
         except Exception as e:
             Log.warn(e)
 

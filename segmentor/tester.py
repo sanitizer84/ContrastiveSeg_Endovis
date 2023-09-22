@@ -90,7 +90,7 @@ class Tester(object):
         Log.info('save dir {}'.format(self.save_dir))
         FileHelper.make_dirs(self.save_dir, is_file=False)
 
-        if self.configer.get('dataset') in ['cityscapes', 'gta5', 'woodscape']:
+        if self.configer.get('dataset') in ['cityscapes', 'gta5', 'davinci']:
             colors = get_cityscapes_colors()
         # elif self.configer.get('dataset') == 'ade20k':
         #     colors = get_ade_colors()
