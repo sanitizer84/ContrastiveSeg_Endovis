@@ -166,16 +166,35 @@ class Trainer(object):
         start_time = time.time()
         cudnn.benchmark = True
 
-        for _, data_dict in enumerate(self.train_loader):                
+        for _, data_dict in enumerate(self.train_loader):
+                
             (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
             self.optimizer.zero_grad()
-            outputs = self.seg_net(*inputs, with_embed=True)
-            backward_loss = self.pixel_loss(outputs, targets, with_embed=True)
-            backward_loss.backward()
-            display_loss = reduce_tensor(backward_loss) / world_size
-            self.train_losses.update(display_loss.item(), batch_size)
+            if self.with_memory:
+                outputs = self.seg_net(*inputs, targets, with_embed=True)
+                outputs['pixel_queue'] = self.seg_net.module.pixel_queue
+                outputs['pixel_queue_ptr'] = self.seg_net.module.pixel_queue_ptr
+                outputs['segment_queue'] = self.seg_net.module.segment_queue
+                outputs['segment_queue_ptr'] = self.seg_net.module.segment_queue_ptr
+            else:
+                outputs = self.seg_net(*inputs, with_embed=True)
 
+            backward_loss = self.pixel_loss(outputs, targets, with_embed=True)
+            display_loss = reduce_tensor(backward_loss) / world_size
+
+            if self.with_memory and 'key' in outputs and 'lb_key' in outputs:
+                self._dequeue_and_enqueue(outputs['key'], outputs['lb_key'],
+                                          segment_queue=self.seg_net.module.segment_queue,
+                                          segment_queue_ptr=self.seg_net.module.segment_queue_ptr,
+                                          pixel_queue=self.seg_net.module.pixel_queue,
+                                          pixel_queue_ptr=self.seg_net.module.pixel_queue_ptr)
+
+            self.train_losses.update(display_loss.item(), batch_size)
+            
+            backward_loss.backward()
             self.optimizer.step()
+            
+            # duhj
             self.scheduler.step()
 
             # Update the vars of the train phase.
@@ -187,7 +206,7 @@ class Trainer(object):
             if self.configer.get('iters') % self.configer.get('solver', 'display_iter') == 0:
                 Log.info('Iter: {0} Time {batch_time.sum:.3f}s Lr = {1} Loss = {loss.val:.8f}'.format(
                     self.configer.get('iters'),
-                    self.module_runner.get_lr(self.optimizer)[0],
+                    self.module_runner.get_lr(self.optimizer),
                     batch_time=self.batch_time, 
                     loss=self.train_losses))
                 self.batch_time.reset()

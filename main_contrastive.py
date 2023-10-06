@@ -10,6 +10,8 @@ import torch.backends.cudnn as cudnn
 from lib.utils.tools.configer import Configer
 from lib.utils.tools.logger import Logger as Log
 
+pos_list = [None] * 12
+neg_list = [None] * 12
 
 def str2bool(v):
     """ Usage:

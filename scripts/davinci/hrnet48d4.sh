@@ -21,7 +21,7 @@ LOG_FILE="${P_PATH}/log/${P_NAME}/${CHECKPOINTS_NAME}"
 echo "Logging to $LOG_FILE"
 
 PRETRAINED_MODEL="${P_PATH}/pretrained_model/hrnetv2_w48_imagenet_pretrained.pth"
-MAX_ITERS=104250
+MAX_ITERS=89400
 BATCH_SIZE=8
 BASE_LR=0.01
 
@@ -31,7 +31,7 @@ if [ "$1"x == "train"x ]; then
                        --phase train \
                        --gathered y \
                        --loss_balance y \
-                       --log_to_file y \
+                       --log_to_file n \
                        --log_file ${LOG_FILE} \
                        --backbone ${BACKBONE} \
                        --model_name ${MODEL_NAME} \
@@ -44,8 +44,8 @@ if [ "$1"x == "train"x ]; then
                        --pretrained ${PRETRAINED_MODEL} \
                        --train_batch_size ${BATCH_SIZE} \
                        --base_lr ${BASE_LR} \
-                       --distributed 
-                      #  2>&1 | tee ${LOG_FILE}
+                       --distributed \
+                       2>&1 | tee ${LOG_FILE}
 
 
 elif [ "$1"x == "resume"x ]; then

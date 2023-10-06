@@ -22,9 +22,9 @@ echo "Logging to $LOG_FILE"
 mkdir -p `dirname $LOG_FILE`
 
 PRETRAINED_MODEL="${P_PATH}/pretrained_model/hrnetv2_w48_imagenet_pretrained.pth"
-MAX_ITERS=67050
-BATCH_SIZE=24
-BASE_LR=0.01
+MAX_ITERS=111750
+BATCH_SIZE=8
+BASE_LR=0.008
 
 if [ "$1"x == "train"x ]; then
   python ${P_PATH}/main_contrastive.py \
@@ -34,11 +34,11 @@ if [ "$1"x == "train"x ]; then
     --gathered y \
     --loss_balance y \
     --pretrained ${PRETRAINED_MODEL} \
-    --log_to_file y \
+    --log_to_file n \
     --log_file ${LOG_FILE} \
     --backbone ${BACKBONE} \
     --model_name ${MODEL_NAME} \
-    --gpu 0 1 \
+    --gpu 2 3 \
     --data_dir ${DATA_DIR} \
     --loss_type ${LOSS_TYPE} \
     --max_iters ${MAX_ITERS} \
@@ -47,8 +47,8 @@ if [ "$1"x == "train"x ]; then
     --pretrained ${PRETRAINED_MODEL} \
     --train_batch_size ${BATCH_SIZE} \
     --base_lr ${BASE_LR} \
-    --distributed
-    # 2>&1 | tee ${LOG_FILE}
+    --distributed \
+    2>&1 | tee ${LOG_FILE}
 
 elif [ "$1"x == "resume"x ]; then
   python -u ${P_PATH}/main_contrastive.py \
@@ -57,7 +57,7 @@ elif [ "$1"x == "resume"x ]; then
     --phase train \
     --gathered y \
     --loss_balance y \
-    --log_to_file y \
+    --log_to_file n \
     --backbone ${BACKBONE} \
     --model_name ${MODEL_NAME} \
     --max_iters ${MAX_ITERS} \
@@ -67,12 +67,12 @@ elif [ "$1"x == "resume"x ]; then
     --checkpoints_root ${CHECKPOINTS_ROOT} \
     --checkpoints_name ${CHECKPOINTS_NAME} \
     --resume_continue y \
-    --resume ../../${CHECKPOINTS_ROOT}/${CHECKPOINTS_NAME}_max_performance.pth \
+    --resume /home/duhj/ContrastiveSeg/checkpoints/davinci/hrnet_w48_contrast_9-ce*0.5_latest.pth \
     --train_batch_size ${BATCH_SIZE} \
-    --distributed
-    # 2>&1 | tee -a ${LOG_FILE}
+    --distributed \
+    2>&1 | tee -a ${LOG_FILE}
 
-
+    # --resume ../../${CHECKPOINTS_ROOT}/${CHECKPOINTS_NAME}_latest.pth \
 elif [ "$1"x == "val"x ]; then
   python ${P_PATH}/main_contrastive.py \
     --configs ${CONFIGS} \

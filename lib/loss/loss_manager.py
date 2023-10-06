@@ -12,7 +12,7 @@ from lib.loss.loss_helper import FSCELoss, FSAuxCELoss, FSCELOVASZLoss, FSAuxRMI
 from lib.loss.loss_helper import SegFixLoss
 from lib.loss.loss_contrast import ContrastCELoss
 from lib.loss.loss_contrast_mem import MemContrastCELoss
-from lib.loss.rmi_loss import RMILoss
+# from lib.loss.rmi_loss import RMILoss
 from lib.utils.tools.logger import Logger as Log
 
 
@@ -23,7 +23,7 @@ SEG_LOSS_DICT = {
     'segfix_loss':          SegFixLoss,
     'fs_ce_lovasz_loss':    FSCELOVASZLoss,
     'fs_auxce_loss':        FSAuxCELoss,
-    'fs_ce_rmi_loss':       FSCERMILoss,
+    # 'fs_ce_rmi_loss':       FSCERMILoss,
     'fs_aux_rmi_loss':      FSAuxRMILoss,
 }
 

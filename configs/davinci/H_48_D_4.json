@@ -99,7 +99,7 @@
         "step_size": 100
       },
       "lambda_poly":{
-        "power": 0.8
+        "power": 0.9
       },
       "warm_iters":0,
       "freeze_backbone":false
@@ -131,9 +131,9 @@
     },
     "contrast": {
       "proj_dim": 256,
-      "temperature": 0.2,
+      "temperature": 0.1,
       "base_temperature": 0.07,
-      "max_samples": 6000,
+      "max_samples": 7000,
       "max_views": 32,
       "stride": 8,
       "loss_weight": 1,

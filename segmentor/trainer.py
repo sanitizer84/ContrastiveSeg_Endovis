@@ -155,11 +155,11 @@ class Trainer(object):
                 )
                 
             (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
-            with torch.cuda.amp.autocast():
-                outputs = self.seg_net(*inputs)
-                loss = self.pixel_loss(outputs, targets)
-                backward_loss = loss
-                display_loss = reduce_tensor(backward_loss) / world_size
+            # with torch.cuda.amp.autocast():
+            outputs = self.seg_net(*inputs)
+            loss = self.pixel_loss(outputs, targets)
+            backward_loss = loss
+            display_loss = reduce_tensor(backward_loss) / world_size
 
             self.train_losses.update(display_loss.item(), batch_size)
             # scaler.scale(backward_loss).backward()
