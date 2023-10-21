@@ -24,7 +24,7 @@ mkdir -p `dirname $LOG_FILE`
 PRETRAINED_MODEL="${P_PATH}/pretrained_model/hrnetv2_w48_imagenet_pretrained.pth"
 MAX_ITERS=67050
 BATCH_SIZE=8
-BASE_LR=0.007
+BASE_LR=0.0065
 
 if [ "$1"x == "train"x ]; then
   python ${P_PATH}/main_contrastive.py \
