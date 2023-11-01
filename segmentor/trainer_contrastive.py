@@ -76,43 +76,43 @@ class Trainer(object):
 
         Log.info("with_memory: {}".format(self.with_memory))
 
-    def _dequeue_and_enqueue(self, keys, labels,
-                             segment_queue, segment_queue_ptr,
-                             pixel_queue, pixel_queue_ptr):
-        batch_size = keys.shape[0]
-        feat_dim = keys.shape[1]
+    # def _dequeue_and_enqueue(self, keys, labels,
+    #                          segment_queue, segment_queue_ptr,
+    #                          pixel_queue, pixel_queue_ptr):
+    #     batch_size = keys.shape[0]
+    #     feat_dim = keys.shape[1]
 
-        labels = labels[:, ::self.network_stride, ::self.network_stride]
+    #     labels = labels[:, ::self.network_stride, ::self.network_stride]
 
-        for bs in range(batch_size):
-            this_feat = keys[bs].contiguous().view(feat_dim, -1)
-            this_label = labels[bs].contiguous().view(-1)
-            this_label_ids = torch.unique(this_label)
-            this_label_ids = [x for x in this_label_ids if x > 0]
+    #     for bs in range(batch_size):
+    #         this_feat = keys[bs].contiguous().view(feat_dim, -1)
+    #         this_label = labels[bs].contiguous().view(-1)
+    #         this_label_ids = torch.unique(this_label)
+    #         this_label_ids = [x for x in this_label_ids if x > 0]
 
-            for lb in this_label_ids:
-                idxs = (this_label == lb).nonzero()
+    #         for lb in this_label_ids:
+    #             idxs = (this_label == lb).nonzero()
 
-                # segment enqueue and dequeue
-                feat = torch.mean(this_feat[:, idxs], dim=1).squeeze(1)
-                ptr = int(segment_queue_ptr[lb])
-                segment_queue[lb, ptr, :] = nn.functional.normalize(feat.view(-1), p=2, dim=0)
-                segment_queue_ptr[lb] = (segment_queue_ptr[lb] + 1) % self.memory_size
+    #             # segment enqueue and dequeue
+    #             feat = torch.mean(this_feat[:, idxs], dim=1).squeeze(1)
+    #             ptr = int(segment_queue_ptr[lb])
+    #             segment_queue[lb, ptr, :] = nn.functional.normalize(feat.view(-1), p=2, dim=0)
+    #             segment_queue_ptr[lb] = (segment_queue_ptr[lb] + 1) % self.memory_size
 
-                # pixel enqueue and dequeue
-                num_pixel = idxs.shape[0]
-                perm = torch.randperm(num_pixel)
-                K = min(num_pixel, self.pixel_update_freq)
-                feat = this_feat[:, perm[:K]]
-                feat = torch.transpose(feat, 0, 1)
-                ptr = int(pixel_queue_ptr[lb])
+    #             # pixel enqueue and dequeue
+    #             num_pixel = idxs.shape[0]
+    #             perm = torch.randperm(num_pixel)
+    #             K = min(num_pixel, self.pixel_update_freq)
+    #             feat = this_feat[:, perm[:K]]
+    #             feat = torch.transpose(feat, 0, 1)
+    #             ptr = int(pixel_queue_ptr[lb])
 
-                if ptr + K >= self.memory_size:
-                    pixel_queue[lb, -K:, :] = nn.functional.normalize(feat, p=2, dim=1)
-                    pixel_queue_ptr[lb] = 0
-                else:
-                    pixel_queue[lb, ptr:ptr + K, :] = nn.functional.normalize(feat, p=2, dim=1)
-                    pixel_queue_ptr[lb] = (pixel_queue_ptr[lb] + 1) % self.memory_size
+    #             if ptr + K >= self.memory_size:
+    #                 pixel_queue[lb, -K:, :] = nn.functional.normalize(feat, p=2, dim=1)
+    #                 pixel_queue_ptr[lb] = 0
+    #             else:
+    #                 pixel_queue[lb, ptr:ptr + K, :] = nn.functional.normalize(feat, p=2, dim=1)
+    #                 pixel_queue_ptr[lb] = (pixel_queue_ptr[lb] + 1) % self.memory_size
 
     @staticmethod
     def group_weight(module):
@@ -199,60 +199,89 @@ class Trainer(object):
                 break
 
 
+    # for endovis 2017
     def __val(self, data_loader=None):
         # Validation function during the train phase.
+        cudnn.benchmark = True
         self.seg_net.eval()
         self.pixel_loss.eval()
-        start_time = time.time()
 
-        data_loader = self.val_loader if data_loader is None else data_loader
-        for j, data_dict in enumerate(data_loader):
-            (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
+        # data_loader = self.val_loader if data_loader is None else data_loader
+        dataset_list = ['val1', 'val2', 'val3', 'val4', 'val5', 'val6', 'val7', 'val8', 'val9', 'val10']
+        for valid in dataset_list:
+            data_loader = self.data_loader.get_valloader(valid)
+            for j, data_dict in enumerate(data_loader):
+                (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
 
-            with torch.no_grad():
+                with torch.no_grad():
+                    outputs = self.seg_net(*inputs, is_eval=True)
+                    # loss = self.pixel_loss(outputs, targets)          
+                    loss = self.pixel_loss(outputs, targets, with_embed=True)     
+                    self.val_losses.update(loss.item(), batch_size)
 
-                outputs = self.seg_net(*inputs, is_eval=True)
-                loss = self.pixel_loss(outputs, targets)               
-                self.val_losses.update(loss.item(), batch_size)
+                    if isinstance(outputs, dict):
+                        self.evaluator.update_score(outputs['seg'], data_dict['meta'])
+                    else:
+                        self.evaluator.update_score(outputs, data_dict['meta'])
 
-                if isinstance(outputs, dict):
-                    self.evaluator.update_score(outputs['seg'], data_dict['meta'])
-                else:
-                    self.evaluator.update_score(outputs, data_dict['meta'])
+            self.evaluator.update_performance()
+            self.configer.update(['val_loss'], self.val_losses.avg)
+            self.module_runner.save_net(self.seg_net, save_mode='performance', experiment=None)
 
-            self.batch_time.update(time.time() - start_time)
-            start_time = time.time()
+            # Print the log info & reset the states.
+            if get_rank() == 0:
+                Log.info(
+                    'Loss {loss.avg:.8f}\n'.format(
+                        batch_time=self.batch_time, loss=self.val_losses))
+                self.evaluator.print_scores()
+            self.val_losses.reset()
+            self.evaluator.reset()
+            self.seg_net.train()
+            self.pixel_loss.train()
 
-        self.evaluator.update_performance()
-        self.configer.update(['val_loss'], self.val_losses.avg)
-        self.module_runner.save_net(self.seg_net, save_mode='performance', experiment=None)
-        # self.module_runner.save_net(self.seg_net, save_mode='val_loss', experiment=None)
 
-        # Print the log info & reset the states.
-        if get_rank() == 0:
-            Log.info(
-                'Test Time {batch_time.sum:.3f}s, ({batch_time.avg:.3f})\t'
-                'Loss {loss.avg:.8f}\n'.format(
-                    batch_time=self.batch_time, loss=self.val_losses))
-            self.evaluator.print_scores()
 
-        self.batch_time.reset()
-        self.val_losses.reset()
-        self.evaluator.reset()
-        self.seg_net.train()
-        self.pixel_loss.train()
+    # original val
+    # def __val(self, data_loader=None):
+    #     # Validation function during the train phase.
+    #     self.seg_net.eval()
+    #     self.pixel_loss.eval()
+
+    #     data_loader = self.val_loader if data_loader is None else data_loader
+    #     for j, data_dict in enumerate(data_loader):
+    #         (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
+
+    #         with torch.no_grad():
+
+    #             outputs = self.seg_net(*inputs, is_eval=True)
+    #             loss = self.pixel_loss(outputs, targets)               
+    #             self.val_losses.update(loss.item(), batch_size)
+
+    #             if isinstance(outputs, dict):
+    #                 self.evaluator.update_score(outputs['seg'], data_dict['meta'])
+    #             else:
+    #                 self.evaluator.update_score(outputs, data_dict['meta'])
+
+    #     self.evaluator.update_performance()
+    #     self.configer.update(['val_loss'], self.val_losses.avg)
+    #     self.module_runner.save_net(self.seg_net, save_mode='performance', experiment=None)
+    #     # self.module_runner.save_net(self.seg_net, save_mode='val_loss', experiment=None)
+
+    #     # Print the log info & reset the states.
+    #     if get_rank() == 0:
+    #         Log.info(
+    #             'Loss {loss.avg:.8f}\n'.format(
+    #                 batch_time=self.batch_time, loss=self.val_losses))
+    #         self.evaluator.print_scores()
+    #     self.val_losses.reset()
+    #     self.evaluator.reset()
+    #     self.seg_net.train()
+    #     self.pixel_loss.train()
+        
+        
 
     def train(self):
-        if self.configer.get('network', 'resume') is not None:
-            if self.configer.get('network', 'resume_val'):
-                self.__val(data_loader=self.data_loader.get_valloader(dataset='val'))
-                return
-            elif self.configer.get('network', 'resume_train'):
-                self.__val(data_loader=self.data_loader.get_valloader(dataset='train'))
-                return
-            # return
-
-        if self.configer.get('network', 'resume') is not None and self.configer.get('network', 'resume_val'):
+        if self.configer.get('network', 'resume_mod') == 'val':
             self.__val(data_loader=self.data_loader.get_valloader(dataset='val'))
             return
 

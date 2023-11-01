@@ -53,7 +53,11 @@ class DeepLabV3(nn.Module):
                     m.bias.data.zero_()
 
     def forward(self, x_):
-        x = self.backbone(x_)
+        # this line was modified by duhj, 20231021.
+        # x = self.backbone(x_)
+        x = self.backbone(x_.cuda())    
+        # Got error of "Input type (torch.FloatTensor) and weight type (torch.cuda.FloatTensor) 
+        # should be the same". Move x_ to cuda solves.
 
         x = self.decoder(x[-4:])
 

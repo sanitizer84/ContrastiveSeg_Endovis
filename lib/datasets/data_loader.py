@@ -17,7 +17,7 @@ from lib.datasets.tools import cv2_aug_transforms
 from lib.datasets.loader.default_loader import DefaultLoader, CSDataTestLoader
 from lib.datasets.tools.collate import collate
 from lib.utils.tools.logger import Logger as Log
-from lib.utils.distributed import get_world_size    #, get_rank, is_distributed
+from lib.utils.distributed import get_world_size, get_rank, is_distributed
 
 
 class DataLoader(object):
@@ -57,8 +57,10 @@ class DataLoader(object):
             loader = klass(root_dir, **kwargs)
         else:
             raise RuntimeError('Unknown root dir {}'.format(root_dir))
-
-        sampler = torch.utils.data.distributed.DistributedSampler(loader)
+        if is_distributed():
+            sampler = torch.utils.data.distributed.DistributedSampler(loader)
+        else:
+            sampler = None
 
 
         return loader, sampler
@@ -86,7 +88,7 @@ class DataLoader(object):
         dataset = 'val' if dataset is None else dataset
         if self.configer.get('method') == 'fcn_segmentor':
             #default manner: load the ground-truth label.
-            Log.info('use DefaultLoader for val ...')
+            if get_rank() == 0: Log.info('use DefaultLoader for {}:'.format(dataset))
             klass = DefaultLoader
         else:
             Log.error('Method: {} loader is invalid.'.format(self.configer.get('method')))

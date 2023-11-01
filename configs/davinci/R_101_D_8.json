@@ -1,21 +1,21 @@
 {
-    "dataset": "davinci_1",
+    "dataset": "davinci",
     "method": "fcn_segmentor",
     "data": {
       "image_tool": "cv2",
       "input_mode": "BGR",
-      "num_classes": 4,
-      "label_list": [0, 1, 2, 3],
+      "num_classes": 8,
+      "label_list": [0, 1, 2, 3, 4, 5, 6, 7],
       "data_dir": "",
       "workers": 8
     },
    "train": {
-      "batch_size": 16,
+      "batch_size": 4,
       "data_transformer": {
         "size_mode": "fix_size",
         "input_size": [512, 512],
-        "align_method": "only_pad",
-        "pad_mode": "random"
+        "align_method": "only_scale",
+        "pad_mode": "only_scale"
       }
     },
     "val": {
@@ -24,7 +24,97 @@
       "data_transformer": {
         "size_mode": "fix_size",
         "input_size": [512, 512],
-        "align_method": "only_pad"
+        "align_method": "only_scale"
+      }
+    },
+    "val1": {
+      "batch_size": 4,
+      "mode": "ss_test",
+      "data_transformer": {
+        "size_mode": "fix_size",
+        "input_size": [512, 512],
+        "align_method": "only_scale"
+      }
+    },
+    "val2": {
+      "batch_size": 4,
+      "mode": "ss_test",
+      "data_transformer": {
+        "size_mode": "fix_size",
+        "input_size": [512, 512],
+        "align_method": "only_scale"
+      }
+    },
+    "val3": {
+      "batch_size": 4,
+      "mode": "ss_test",
+      "data_transformer": {
+        "size_mode": "fix_size",
+        "input_size": [512, 512],
+        "align_method": "only_scale"
+      }
+    },
+    "val4": {
+      "batch_size": 4,
+      "mode": "ss_test",
+      "data_transformer": {
+        "size_mode": "fix_size",
+        "input_size": [512, 512],
+        "align_method": "only_scale"
+      }
+    },
+    "val5": {
+      "batch_size": 4,
+      "mode": "ss_test",
+      "data_transformer": {
+        "size_mode": "fix_size",
+        "input_size": [512, 512],
+        "align_method": "only_scale"
+      }
+    },
+    "val6": {
+      "batch_size": 4,
+      "mode": "ss_test",
+      "data_transformer": {
+        "size_mode": "fix_size",
+        "input_size": [512, 512],
+        "align_method": "only_scale"
+      }
+    },
+    "val7": {
+      "batch_size": 4,
+      "mode": "ss_test",
+      "data_transformer": {
+        "size_mode": "fix_size",
+        "input_size": [512, 512],
+        "align_method": "only_scale"
+      }
+    },
+    "val8": {
+      "batch_size": 4,
+      "mode": "ss_test",
+      "data_transformer": {
+        "size_mode": "fix_size",
+        "input_size": [512, 512],
+        "align_method": "only_scale"
+      }
+    },
+    "val9": {
+      "batch_size": 4,
+      "mode": "ss_test",
+      "data_transformer": {
+        "size_mode": "fix_size",
+        "input_size": [512, 512],
+        "align_method": "only_scale"
+      }
+    },
+    "val10": {
+      "batch_size": 4,
+      "mode": "ss_test",
+      "data_transformer": {
+        "size_mode": "fix_size",
+        "input_size": [512, 512],
+        "align_method": "only_scale"
       }
     },
     "test": {
@@ -34,7 +124,7 @@
       "data_transformer": {
         "size_mode": "fix_size",
         "input_size": [512, 512],
-        "align_method": "only_pad"
+        "align_method": "only_scale"
       }
     },
     "train_trans": {
@@ -70,28 +160,28 @@
       "std": [1.0, 1.0, 1.0]
     },
     "checkpoints": {
-      "checkpoints_name": "fs_baseocnet_cityscapes_seg",
-      "checkpoints_dir": "./checkpoints/cityscapes",
+      "checkpoints_name": "fs_baseocnet_davinci_seg",
+      "checkpoints_dir": "./checkpoints/davinci",
       "save_iters": 1000
     },
     "network":{
       "backbone": "deepbase_resnet101_dilated8",
       "multi_grid": [1, 1, 1],
-      "model_name": "base_ocnet",
+      "model_name": "",
       "bn_type": "torchsyncbn",
       "stride": 8,
       "factors": [[8, 8]],
       "loss_weights": {
-        "corr_loss": 0.01,
         "aux_loss": 0.4,
         "seg_loss": 1.0
-      }
+      },
+      "resume_mode": "train" 
     },
     "logging": {
       "logfile_level": "info",
       "stdout_level": "info",
-      "log_file": "",
-      "log_format": "",
+      "log_file": "./log/davinci/fs_baseocnet_davinci_seg.log",
+      "log_format": "%(asctime)s %(levelname)-7s %(message)s",
       "rewrite": true
     },
     "lr": {
@@ -102,13 +192,13 @@
         "gamma": 0.5,
         "step_size": 100
       },
-      "warm_iters":2000,
+      "warm_iters":0,
       "freeze_backbone":false
     },
     "solver": {
-      "display_iter": 556,
-      "test_interval": 556,
-      "max_iters": 11120
+      "display_iter": 1800,
+      "test_interval": 1800,
+      "max_iters": 40000
     },
     "optim": {
       "optim_method": "sgd",
@@ -124,23 +214,22 @@
       }
     },
     "loss": {
-      "loss_type": "fs_ce_loss",
+      "loss_type": "fs_auxce_loss",
       "params": {
-        "ce_weight": [1, 5, 10, 10],
         "ce_reduction": "mean",
         "ce_ignore_index": -1,
-        "ohem_thresh": 0.9
+        "ohem_minkeep": 100000,
+        "ohem_thresh": 0.7
       }
     },
     "contrast": {
       "proj_dim": 256,
-      "temperature": 0.1,
+      "temperature": 0.12,
       "base_temperature": 0.07,
-      "max_samples": 1024,
-      "max_views": 100,
+      "max_samples": 7000,
+      "max_views": 32,
       "stride": 8,
-      "warmup_iters": 1000,
-      "loss_weight": 1,
+      "loss_weight": 2,
       "use_rmi": false
     }
 }

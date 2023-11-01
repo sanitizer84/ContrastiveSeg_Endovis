@@ -196,14 +196,21 @@ if __name__ == "__main__":
     model = None
     if configer.get('method') == 'fcn_segmentor':
         if configer.get('phase') == 'train':
-            
             from segmentor.trainer import Trainer
+            model = Trainer(configer)
+            model.train()
+        elif configer.get('phase') == 'val':
+            from segmentor.validator import Trainer
             model = Trainer(configer)
             model.train()
         elif configer.get('phase') == 'test':
             from segmentor.tester import Tester 
             model = Tester(configer)    
             model.test()
+        elif configer.get('phase') == 'tsne':
+            from segmentor.tsne import Trainer
+            model = Trainer(configer)
+            model.train()    
         else:
             Log.error('Phase: {} is not valid.'.format(configer.get('phase')))
             exit(1)

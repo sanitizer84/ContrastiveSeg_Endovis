@@ -2,8 +2,7 @@
 # Params:
 # $1: train, val, test, segfix
 # $2: 1, 2, 3... index of run
-# $3: if segfix, val or test
-# $4: ss, ms
+
 P_PATH="../.."
 P_NAME="davinci"
 DATA_DIR="/tmp/512"
@@ -65,6 +64,7 @@ elif [ "$1"x == "resume"x ]; then
     --resume_continue y \
     --resume ${P_PATH}/checkpoints/davinci/${CHECKPOINTS_NAME}_latest.pth \
     --checkpoints_name ${CHECKPOINTS_NAME} \
+    --distributed \
     2>&1 | tee -a ${LOG_FILE}
 
 elif [ "$1"x == "val"x ]; then
@@ -86,25 +86,7 @@ elif [ "$1"x == "val"x ]; then
     --resume ${P_PATH}/checkpoints/davinci/${CHECKPOINTS_NAME}_max_performance.pth \
     --train_batch_size ${BATCH_SIZE} \
     --distributed \
-    2>&1 | tee -a ${LOG_FILE}
-
-# elif [ "$1"x == "val"x ]; then
-#   python -u ${P_PATH}/main.py --configs ${CONFIGS} \
-#     --drop_last y \
-#     --backbone ${BACKBONE} --model_name ${MODEL_NAME} \
-#     --checkpoints_name ${CHECKPOINTS_NAME} \
-#     --phase test \
-#     --gpu 0 2 \
-#     --resume ${CHECKPOINTS_ROOT}/davinci/${CHECKPOINTS_NAME}_max_performance.pth \
-#     --loss_type ${LOSS_TYPE} \
-#     --test_dir ${DATA_DIR}/val/image \
-#     --out_dir ${SAVE_DIR}${CHECKPOINTS_NAME}_val \
-#     --data_dir ${DATA_DIR}
-
-
-#   cd lib/metrics
-#   python -u cityscapes_evaluator.py --pred_dir ${SAVE_DIR}${CHECKPOINTS_NAME}_val/label  \
-#                                        --gt_dir ${DATA_DIR}/val/label
+    2>&1 | tee -a ${LOG_FILE}_val.log
 
 
 elif [ "$1"x == "test"x ]; then

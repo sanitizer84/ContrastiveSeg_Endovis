@@ -32,14 +32,17 @@ except:
     print("Failed to import numpy package.")
     sys.exit(-1)
 
-# Cityscapes modules
-from lib.metrics.cityscapes.helpers.annotation import Annotation
-try:
-    # from lib.metrics.cityscapes.helpers.annotation import Annotation
-    from lib.metrics.cityscapes.helpers.labels import labels, name2label, id2label, trainId2label, category2labels
-except:
-    print("Failed to find all Cityscapes modules")
-    sys.exit(-1)
+# lib_path = '/home/duhj/ContrastiveSeg'
+# sys.path.append(lib_path)
+
+# # Cityscapes modules
+# from lib.metrics.cityscapes.helpers.annotation import Annotation
+# try:
+#     # from lib.metrics.cityscapes.helpers.annotation import Annotation
+#     from lib.metrics.cityscapes.helpers.labels import labels, name2label, id2label, trainId2label, category2labels
+# except:
+#     print("Failed to find all Cityscapes modules")
+#     sys.exit(-1)
 
 # Print an error message and quit
 def printError(message):

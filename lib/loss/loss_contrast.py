@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from lib.loss.loss_helper import FSCELoss#, FSAuxRMILoss
+from lib.loss.loss_helper import FSCELoss, FSAuxCELoss
 from lib.utils.tools.logger import Logger as Log
 from main_contrastive import neg_list, pos_list
 
@@ -11,7 +11,7 @@ def add_samples(sample_list, id, newdata):
     if sample_list[id] is None:
         sample_list[id] = newdata
     else:
-        sample_list[id] = torch.cat((sample_list[id], newdata), 0)[-65536:-1]
+        sample_list[id] = torch.cat((sample_list[id], newdata), 0)[-4000:-1]
 
 class PixelContrastLoss(nn.Module, ABC):
     def __init__(self, configer):
@@ -26,13 +26,14 @@ class PixelContrastLoss(nn.Module, ABC):
         self.max_samples = self.configer.get('contrast', 'max_samples')
         self.max_views = 32
 
-
+    # my own contrastive seg
     def _hard_anchor_sampling(self, X, gt, y):
         global pos_list, neg_list
         # 这里gt是标签， y是预测值
         batch_size, feat_dim = X.shape[0], X.shape[-1]
         classes = []
         total_classes = 0
+
         for ii in range(batch_size):
             this_classes = torch.unique(gt[ii]) #所有clasid
             classes.append([x for x in this_classes if x != self.ignore_label])     #去掉忽略的类
@@ -52,12 +53,10 @@ class PixelContrastLoss(nn.Module, ABC):
         for ii in range(batch_size):
             # 批次里的每一张图
             this_gt = gt[ii]
-            this_y = y[ii]          
+            # this_y = y[ii]          
             for cls_id in classes[ii]:       #每张图中所有类别  
                 id = int(cls_id)                  
-                # hard_indices = ((this_gt == cls_id) & (this_y != cls_id)).nonzero()
-                hard_indices = (this_gt != cls_id).nonzero()
-                # easy_indices = ((this_gt == cls_id) & (this_y == cls_id)).nonzero()     
+                hard_indices = (this_gt != cls_id).nonzero()   
                 easy_indices = (this_gt == cls_id).nonzero()      
                 num_hard, num_easy = hard_indices.shape[0], easy_indices.shape[0] 
                 if num_hard > 0 and num_easy > 0:
@@ -85,25 +84,14 @@ class PixelContrastLoss(nn.Module, ABC):
                             easy_indices = pos_list[cls_id].repeat(easy_view//pos_list[cls_id].size(0) , 1)
                         else:
                             easy_indices = pos_list[cls_id][torch.randperm(num_easy)[:easy_view]]    
+
                 elif num_hard == 0 and num_easy >0:     
-                    if pos_list[id] is not None: pos_list[id] = pos_list[id][:1]
+                    if pos_list[id] is not None: pos_list[id] = pos_list[id][:100]
                     add_samples(pos_list, id, easy_indices)     # 保存当前分类正确样本 
                     if 0 < num_easy < easy_view:                    # 构建当前正确样本序列
                         easy_indices = easy_indices.repeat(easy_view//num_easy, 1)
                     else:
                         easy_indices = easy_indices[torch.randperm(num_easy)[:easy_view]]
-                     
-                    # 用准确率最低的类之前，标签正确预测正确的数据填充hard indices
-                    if pos_list[8] != None:
-                        len_p = pos_list[8].size(0)
-                        if 0 < len_p < hard_view:
-                            hard_indices = pos_list[8].repeat(hard_view//len_p, 1)
-                        else:
-                            perm = torch.randperm(num_hard)
-                            hard_indices = pos_list[8][perm[:hard_view]]
-                    # add_samples(neg_list, cls_id, hard_indices)     # 保存当前分类错误样本 
-                # add_samples(pos_list, id, easy_indices)     # 保存当前分类正确样本   
-                # add_samples(neg_list, id, hard_indices)     # 保存当前分类错误样本 
                         
                 indices = torch.cat((hard_indices, easy_indices), dim=0)
                 X_[X_ptr, :indices.size(0), :] = X[ii, indices, :].squeeze(1)
@@ -115,7 +103,7 @@ class PixelContrastLoss(nn.Module, ABC):
   
     
     
-    
+    # # old contrastive of the paper Exploring....
     # def _hard_anchor_sampling(self, X, y_hat, y):
     #     # 这里y_hat是label， y是预测值
     #     batch_size, feat_dim = X.shape[0], X.shape[-1]
@@ -285,7 +273,47 @@ class ContrastCELoss(nn.Module, ABC):
         loss_contrast = self.contrast_criterion(embedding, target, predict)
 
         if with_embed is True:
-            return 0.5*loss + self.loss_weight * loss_contrast
+            return loss + self.loss_weight * loss_contrast
+
         
-        return loss + 0 * loss_contrast  # just a trick to avoid errors in distributed training
+        # return loss + 0 * loss_contrast  # just a trick to avoid errors in distributed training
     
+
+class ContrastAuxCELoss(nn.Module, ABC):
+    def __init__(self, configer=None):
+        super(ContrastAuxCELoss, self).__init__()
+
+        self.configer = configer
+
+        ignore_index = -1
+        if self.configer.exists('loss', 'params') and 'ce_ignore_index' in self.configer.get('loss', 'params'):
+            ignore_index = self.configer.get('loss', 'params')['ce_ignore_index']
+        Log.info('ignore_index: {}'.format(ignore_index))
+
+        self.loss_weight = self.configer.get('contrast', 'loss_weight')
+        self.seg_criterion = FSAuxCELoss(configer=configer)
+        self.contrast_criterion = PixelContrastLoss(configer=configer)
+
+    def forward(self, preds, target, with_embed=False):
+        h, w = target.size(1), target.size(2)
+
+        assert "seg" in preds
+        assert "seg_aux" in preds
+        assert "embed" in preds
+
+        seg = preds['seg']
+        seg_aux = preds['seg_aux']
+        embedding = preds['embed']
+
+        pred = F.interpolate(input=seg, size=(h, w), mode='bilinear', align_corners=True)
+        pred_aux = F.interpolate(input=seg_aux, size=(h, w), mode='bilinear', align_corners=True)
+        loss = self.seg_criterion([pred_aux, pred], target)
+
+        _, predict = torch.max(seg, 1)
+        loss_contrast = self.contrast_criterion(embedding, target, predict)
+
+        if with_embed is True:
+            return loss + self.loss_weight * loss_contrast
+
+        return loss + 0 * loss_contrast  # just a trick to avoid errors in distributed training
+

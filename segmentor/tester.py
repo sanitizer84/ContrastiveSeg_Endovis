@@ -32,7 +32,7 @@ from lib.models.model_manager import ModelManager
 from lib.utils.tools.logger import Logger as Log
 from lib.metrics.running_score import RunningScore
 from lib.vis.seg_visualizer import SegVisualizer
-from lib.vis.palette import get_cityscapes_colors   
+from lib.vis.palette import get_davinci_colors   
 from segmentor.tools.module_runner import ModuleRunner
 from segmentor.tools.optim_scheduler import OptimScheduler
 
@@ -90,8 +90,8 @@ class Tester(object):
         Log.info('save dir {}'.format(self.save_dir))
         FileHelper.make_dirs(self.save_dir, is_file=False)
 
-        if self.configer.get('dataset') in ['cityscapes', 'gta5', 'davinci']:
-            colors = get_cityscapes_colors()
+        if self.configer.get('dataset') in ['davinci']:
+            colors = get_davinci_colors()
         # elif self.configer.get('dataset') == 'ade20k':
         #     colors = get_ade_colors()
         # elif self.configer.get('dataset') == 'pascal_context':
@@ -134,17 +134,17 @@ class Tester(object):
                     offset_w_maps = data_dict['offsetmap_w']
                     outputs = self.offset_test(inputs, offset_h_maps, offset_w_maps)
                 elif self.configer.get('test', 'mode') == 'ss_test':
-                    outputs = self.ss_test(inputs)
-                elif self.configer.get('test', 'mode') == 'ms_test':
-                    outputs = self.ms_test(inputs)
-                elif self.configer.get('test', 'mode') == 'ms_test_depth':
-                    outputs = self.ms_test_depth(inputs, names)
-                elif self.configer.get('test', 'mode') == 'sscrop_test':
-                    crop_size = self.configer.get('test', 'crop_size')
-                    outputs = self.sscrop_test(inputs, crop_size)
-                elif self.configer.get('test', 'mode') == 'mscrop_test':
-                    crop_size = self.configer.get('test', 'crop_size')
-                    outputs = self.mscrop_test(inputs, crop_size)
+                    outputs = self.ss_test(inputs.cuda())
+                # elif self.configer.get('test', 'mode') == 'ms_test':
+                #     outputs = self.ms_test(inputs)
+                # elif self.configer.get('test', 'mode') == 'ms_test_depth':
+                #     outputs = self.ms_test_depth(inputs, names)
+                # elif self.configer.get('test', 'mode') == 'sscrop_test':
+                #     crop_size = self.configer.get('test', 'crop_size')
+                #     outputs = self.sscrop_test(inputs, crop_size)
+                # elif self.configer.get('test', 'mode') == 'mscrop_test':
+                #     crop_size = self.configer.get('test', 'crop_size')
+                #     outputs = self.mscrop_test(inputs, crop_size)
 
                 if isinstance(outputs, torch.Tensor):
                     outputs = outputs.permute(0, 2, 3, 1).cpu().numpy()

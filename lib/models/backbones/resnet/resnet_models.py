@@ -216,7 +216,6 @@ class ResNetModels(object):
         """
         model = ResNet(Bottleneck, [3, 4, 23, 3], deep_base=True,
                        bn_type=self.configer.get('network', 'bn_type'), **kwargs)
-        # todo: 需要找到deeplabv3 的imagenet预训练模型
 
         print(self.configer.get('network', 'pretrained'))
         model = ModuleHelper.load_model(model, pretrained=self.configer.get('network', 'pretrained'))

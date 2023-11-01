@@ -8,11 +8,8 @@
 ## LICENSE file in the root directory of this source tree 
 ##+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
-
-
-
 import numpy as np
+np.seterr(divide='ignore',invalid='ignore')
 import lib.utils.distributed as dist
 
 from lib.utils.tools.logger import Logger as Log

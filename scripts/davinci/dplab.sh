@@ -2,8 +2,7 @@
 # Params:
 # $1: train, val, test, segfix
 # $2: 1, 2, 3... index of run
-# $3: if segfix, val or test
-# $4: ss, ms
+
 P_PATH="../.."
 P_NAME="davinci"
 DATA_DIR="/tmp/512"
@@ -26,7 +25,8 @@ BATCH_SIZE=8
 BASE_LR=0.008
 
 if [ "$1"x == "train"x ]; then
-  python ${P_PATH}/main.py --configs ${CONFIGS} \
+  python ${P_PATH}/main.py \
+    --configs ${CONFIGS} \
     --drop_last y \
     --phase train \
     --gathered y \
@@ -88,25 +88,6 @@ elif [ "$1"x == "val"x ]; then
     --train_batch_size ${BATCH_SIZE} \
     --distributed \
     2>&1 | tee -a ${LOG_FILE}
-
-
-  #   --configs ${CONFIGS} \
-  #   --drop_last y  \
-  #   --data_dir ${DATA_DIR} \
-  #   --backbone ${BACKBONE} \
-  #   --model_name ${MODEL_NAME} \
-  #   --checkpoints_name ${CHECKPOINTS_NAME} \
-  #   --phase test \
-  #   --gpu 0 2 \
-  #   --resume ${P_PATH}/checkpoints/davinci/${CHECKPOINTS_NAME}_max_performance.pth \
-  #   --loss_type ${LOSS_TYPE} \
-  #   --test_dir ${DATA_DIR}/test \
-  #   --out_dir ${SAVE_DIR}/${CHECKPOINTS_NAME}_val 
-
-  # python -u ${P_PATH}/lib/metrics/cityscapes_evaluator.py \
-  #   --pred_dir ${SAVE_DIR}/${CHECKPOINTS_NAME}_val_ms/label  \
-  #   --gt_dir ${DATA_DIR}/val/label
-
 
 
 elif [ "$1"x == "test"x ]; then

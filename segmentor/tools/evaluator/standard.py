@@ -88,7 +88,7 @@ class StandardEvaluator(_BaseEvaluator):
                     item[i, :border_size[1], :border_size[0]].cpu().numpy(),
                     tuple(ori_img_size), interpolation=cv2.INTER_CUBIC
                 )
-                outputs_numpy[name] = item
+                outputs_numpy[name] = item            
 
             for name in outputs_numpy:
                 tasks.task_mapping[name].eval(

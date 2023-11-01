@@ -115,3 +115,4 @@ log/
 checkpoints/
 .DS_Store
 .idea/
+output/

@@ -77,7 +77,7 @@ if __name__ == "__main__":
                         dest='network:bn_type', help='The BN type of the network.')
     parser.add_argument('--multi_grid', default=None, nargs='+', type=int,
                         dest='network:multi_grid', help='The multi_grid for resnet backbone.')
-    parser.add_argument('--pretrained', type=str, default="./pretrained_model/hrnetv2_w48_imagenet_pretrained.pth",
+    parser.add_argument('--pretrained', type=str, default=None,
                         dest='network:pretrained', help='The path to pretrained model.')
     parser.add_argument('--resume', default=None, type=str,
                         dest='network:resume', help='The path of checkpoints.')
@@ -201,6 +201,14 @@ if __name__ == "__main__":
             from segmentor.trainer_contrastive import Trainer
             model = Trainer(configer)
             model.train()
+        elif configer.get('phase') == 'val':
+            from segmentor.validator_contrastive import Trainer
+            model = Trainer(configer)
+            model.train()
+        elif configer.get('phase') == 'tsne':
+            from segmentor.tsne_contrastive import Trainer
+            model = Trainer(configer)
+            model.train() 
         elif configer.get('phase') == 'test':
             from segmentor.tester import Tester 
             model = Tester(configer)    

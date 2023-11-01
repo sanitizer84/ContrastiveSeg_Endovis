@@ -58,21 +58,7 @@ class Trainer(object):
 
     def _init_model(self):
         self.seg_net = self.model_manager.semantic_segmentor()
-
-        # try:
-        #     from mmcv.cnn import get_model_complexity_info
-        #     flops, params = get_model_complexity_info(self.seg_net, (3, 512, 512))
-        #     split_line = '=' * 30
-        #     print('{0}\nInput shape: {1}\nFlops: {2}\nParams: {3}\n{0}'.format(
-        #         split_line, (3, 512, 512), flops, params))
-        #     print('Be cautious if you use the results in papers. '
-        #           'You may need to check if all ops are supported and verify that the '
-        #           'flops computation is correct.')
-        # except:
-        #     pass
-
         self.seg_net = self.module_runner.load_net(self.seg_net)
-
         Log.info('Params Group Method: {}'.format(self.configer.get('optim', 'group_method')))
         if self.configer.get('optim', 'group_method') == 'decay':
             params_group = self.group_weight(self.seg_net)
@@ -196,47 +182,51 @@ class Trainer(object):
                 break
         
         
-
+    # for endovis 2017
     def __val(self, data_loader=None):
         # Validation function during the train phase.
         cudnn.benchmark = True
         self.seg_net.eval()
         self.pixel_loss.eval()
         start_time = time.time()
-        data_loader = self.val_loader if data_loader is None else data_loader
-        for j, data_dict in enumerate(data_loader):
-            self.optimizer.zero_grad()
-            (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
-
-            with torch.no_grad():
-                outputs = self.seg_net(*inputs)
-                loss = self.pixel_loss(
-                    outputs, targets,
-                    gathered=self.configer.get('network', 'gathered')
-                )
-
-                self.val_losses.update(loss.item(), batch_size)
-                if isinstance(outputs, dict):
-                    try:
-                        outputs = outputs['pred']
-                    except:
-                        outputs = outputs['seg']
-                self.evaluator.update_score(outputs, data_dict['meta'])
-
-            self.batch_time.update(time.time() - start_time)
-            start_time = time.time()
-
-        self.evaluator.update_performance()
-
-        self.configer.update(['val_loss'], self.val_losses.avg)
-        self.module_runner.save_net(self.seg_net, save_mode='performance')
-        # self.module_runner.save_net(self.seg_net, save_mode='val_loss')
+        # 为endovis2017数据集做的修改，共有10个dataset用于验证    
+        dataset_list = ['val1', 'val2', 'val3', 'val4', 'val5', 'val6', 'val7', 'val8', 'val9', 'val10']
         
-        # Print the log info & reset the states.
-        self.evaluator.reduce_scores()
-        if get_rank() == 0:
-            Log.info('Test Time {t.sum:.3f}s, Loss {l.avg:.8f}'.format(t=self.batch_time, l=self.val_losses))
-            self.evaluator.print_scores()
+        for valid in dataset_list:
+            # data_loader = self.val_loader if data_loader is None else data_loader
+            data_loader = self.data_loader.get_valloader(valid)
+            for j, data_dict in enumerate(data_loader):
+                self.optimizer.zero_grad()
+                (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
+
+                with torch.no_grad():
+                    outputs = self.seg_net(*inputs)
+                    loss = self.pixel_loss(
+                        outputs, targets,
+                        gathered=self.configer.get('network', 'gathered')
+                    )
+
+                    self.val_losses.update(loss.item(), batch_size)
+                    if isinstance(outputs, dict):
+                        try:
+                            outputs = outputs['pred']
+                        except:
+                            outputs = outputs['seg']
+                    self.evaluator.update_score(outputs, data_dict['meta'])
+
+                self.batch_time.update(time.time() - start_time)
+                start_time = time.time()
+
+            self.evaluator.update_performance()
+
+            self.configer.update(['val_loss'], self.val_losses.avg)
+            self.module_runner.save_net(self.seg_net, save_mode='performance')
+            
+            # Print the log info & reset the states.
+            self.evaluator.reduce_scores()
+            if get_rank() == 0:
+                Log.info('Test Time {t.sum:.3f}s, Loss {l.avg:.8f}'.format(t=self.batch_time, l=self.val_losses))
+                self.evaluator.print_scores()
 
         self.batch_time.reset()
         self.val_losses.reset()
@@ -244,20 +234,64 @@ class Trainer(object):
         
         self.seg_net.train()
         self.pixel_loss.train()
+    
+    
+    
+    
+    # # for original val, endovis 2018 
+    # def __val(self, data_loader=None):
+    #     # Validation function during the train phase.
+    #     cudnn.benchmark = True
+    #     self.seg_net.eval()
+    #     self.pixel_loss.eval()
+    #     start_time = time.time()
+    #     data_loader = self.val_loader if data_loader is None else data_loader
+    #     for j, data_dict in enumerate(data_loader):
+    #         self.optimizer.zero_grad()
+    #         (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
+
+    #         with torch.no_grad():
+    #             outputs = self.seg_net(*inputs)
+    #             loss = self.pixel_loss(
+    #                 outputs, targets,
+    #                 gathered=self.configer.get('network', 'gathered')
+    #             )
+
+    #             self.val_losses.update(loss.item(), batch_size)
+    #             if isinstance(outputs, dict):
+    #                 try:
+    #                     outputs = outputs['pred']
+    #                 except:
+    #                     outputs = outputs['seg']
+    #             self.evaluator.update_score(outputs, data_dict['meta'])
+
+    #         self.batch_time.update(time.time() - start_time)
+    #         start_time = time.time()
+
+    #     self.evaluator.update_performance()
+
+    #     self.configer.update(['val_loss'], self.val_losses.avg)
+    #     self.module_runner.save_net(self.seg_net, save_mode='performance')
+    #     # self.module_runner.save_net(self.seg_net, save_mode='val_loss')
+        
+    #     # Print the log info & reset the states.
+    #     self.evaluator.reduce_scores()
+    #     if get_rank() == 0:
+    #         Log.info('Test Time {t.sum:.3f}s, Loss {l.avg:.8f}'.format(t=self.batch_time, l=self.val_losses))
+    #         self.evaluator.print_scores()
+
+    #     self.batch_time.reset()
+    #     self.val_losses.reset()
+    #     self.evaluator.reset()
+        
+    #     self.seg_net.train()
+    #     self.pixel_loss.train()
+
+
 
     def train(self):
-        # cudnn.benchmark = True
-        # self.__val()
-        if self.configer.get('network', 'resume') is not None:
-            if self.configer.get('network', 'resume_val'):
-                self.__val(data_loader=self.data_loader.get_valloader(dataset='val'))
-                return
-            elif self.configer.get('network', 'resume_train'):
-                self.__val(data_loader=self.data_loader.get_valloader(dataset='train'))
-                return
-            # return
-
-        if self.configer.get('network', 'resume') is not None and self.configer.get('network', 'resume_val'):
+        cudnn.benchmark = True
+        if self.configer.get('network', 'resume_mod') == 'val':
             self.__val(data_loader=self.data_loader.get_valloader(dataset='val'))
             return
 
