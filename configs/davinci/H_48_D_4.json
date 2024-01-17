@@ -4,9 +4,9 @@
   "data": {
     "image_tool": "cv2",
     "input_mode": "BGR",
-    "num_classes": 11,
+    "num_classes": 9,
     "label_ready": true,
-    "label_class_ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    "label_class_ids": [0, 1, 2, 3, 4, 5, 6, 7, 8],
     "data_dir": "",
     "workers": 8
   },

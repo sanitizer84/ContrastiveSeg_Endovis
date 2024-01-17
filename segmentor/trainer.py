@@ -182,103 +182,51 @@ class Trainer(object):
                 break
         
         
-    # for endovis 2017
-    def __val(self, data_loader=None):
-        # Validation function during the train phase.
-        cudnn.benchmark = True
-        self.seg_net.eval()
-        self.pixel_loss.eval()
-        start_time = time.time()
-        # 为endovis2017数据集做的修改，共有10个dataset用于验证    
-        dataset_list = ['val1', 'val2', 'val3', 'val4', 'val5', 'val6', 'val7', 'val8', 'val9', 'val10']
-        
-        for valid in dataset_list:
-            # data_loader = self.val_loader if data_loader is None else data_loader
-            data_loader = self.data_loader.get_valloader(valid)
-            for j, data_dict in enumerate(data_loader):
-                self.optimizer.zero_grad()
-                (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
-
-                with torch.no_grad():
-                    outputs = self.seg_net(*inputs)
-                    loss = self.pixel_loss(
-                        outputs, targets,
-                        gathered=self.configer.get('network', 'gathered')
-                    )
-
-                    self.val_losses.update(loss.item(), batch_size)
-                    if isinstance(outputs, dict):
-                        try:
-                            outputs = outputs['pred']
-                        except:
-                            outputs = outputs['seg']
-                    self.evaluator.update_score(outputs, data_dict['meta'])
-
-                self.batch_time.update(time.time() - start_time)
-                start_time = time.time()
-
-            self.evaluator.update_performance()
-
-            self.configer.update(['val_loss'], self.val_losses.avg)
-            self.module_runner.save_net(self.seg_net, save_mode='performance')
-            
-            # Print the log info & reset the states.
-            self.evaluator.reduce_scores()
-            if get_rank() == 0:
-                Log.info('Test Time {t.sum:.3f}s, Loss {l.avg:.8f}'.format(t=self.batch_time, l=self.val_losses))
-                self.evaluator.print_scores()
-
-        self.batch_time.reset()
-        self.val_losses.reset()
-        self.evaluator.reset()
-        
-        self.seg_net.train()
-        self.pixel_loss.train()
-    
-    
-    
-    
-    # # for original val, endovis 2018 
+    # # for endovis 2017
     # def __val(self, data_loader=None):
     #     # Validation function during the train phase.
     #     cudnn.benchmark = True
     #     self.seg_net.eval()
     #     self.pixel_loss.eval()
     #     start_time = time.time()
-    #     data_loader = self.val_loader if data_loader is None else data_loader
-    #     for j, data_dict in enumerate(data_loader):
-    #         self.optimizer.zero_grad()
-    #         (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
-
-    #         with torch.no_grad():
-    #             outputs = self.seg_net(*inputs)
-    #             loss = self.pixel_loss(
-    #                 outputs, targets,
-    #                 gathered=self.configer.get('network', 'gathered')
-    #             )
-
-    #             self.val_losses.update(loss.item(), batch_size)
-    #             if isinstance(outputs, dict):
-    #                 try:
-    #                     outputs = outputs['pred']
-    #                 except:
-    #                     outputs = outputs['seg']
-    #             self.evaluator.update_score(outputs, data_dict['meta'])
-
-    #         self.batch_time.update(time.time() - start_time)
-    #         start_time = time.time()
-
-    #     self.evaluator.update_performance()
-
-    #     self.configer.update(['val_loss'], self.val_losses.avg)
-    #     self.module_runner.save_net(self.seg_net, save_mode='performance')
-    #     # self.module_runner.save_net(self.seg_net, save_mode='val_loss')
+    #     # 为endovis2017数据集做的修改，共有10个dataset用于验证    
+    #     dataset_list = ['val1', 'val2', 'val3', 'val4', 'val5', 'val6', 'val7', 'val8', 'val9', 'val10']
         
-    #     # Print the log info & reset the states.
-    #     self.evaluator.reduce_scores()
-    #     if get_rank() == 0:
-    #         Log.info('Test Time {t.sum:.3f}s, Loss {l.avg:.8f}'.format(t=self.batch_time, l=self.val_losses))
-    #         self.evaluator.print_scores()
+    #     for valid in dataset_list:
+    #         # data_loader = self.val_loader if data_loader is None else data_loader
+    #         data_loader = self.data_loader.get_valloader(valid)
+    #         for j, data_dict in enumerate(data_loader):
+    #             self.optimizer.zero_grad()
+    #             (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
+
+    #             with torch.no_grad():
+    #                 outputs = self.seg_net(*inputs)
+    #                 loss = self.pixel_loss(
+    #                     outputs, targets,
+    #                     gathered=self.configer.get('network', 'gathered')
+    #                 )
+
+    #                 self.val_losses.update(loss.item(), batch_size)
+    #                 if isinstance(outputs, dict):
+    #                     try:
+    #                         outputs = outputs['pred']
+    #                     except:
+    #                         outputs = outputs['seg']
+    #                 self.evaluator.update_score(outputs, data_dict['meta'])
+
+    #             self.batch_time.update(time.time() - start_time)
+    #             start_time = time.time()
+
+    #         self.evaluator.update_performance()
+
+    #         self.configer.update(['val_loss'], self.val_losses.avg)
+    #         self.module_runner.save_net(self.seg_net, save_mode='performance')
+            
+    #         # Print the log info & reset the states.
+    #         self.evaluator.reduce_scores()
+    #         if get_rank() == 0:
+    #             Log.info('Test Time {t.sum:.3f}s, Loss {l.avg:.8f}'.format(t=self.batch_time, l=self.val_losses))
+    #             self.evaluator.print_scores()
 
     #     self.batch_time.reset()
     #     self.val_losses.reset()
@@ -286,6 +234,58 @@ class Trainer(object):
         
     #     self.seg_net.train()
     #     self.pixel_loss.train()
+    
+    
+    
+    
+    # for original val, endovis 2018 
+    def __val(self, data_loader=None):
+        # Validation function during the train phase.
+        cudnn.benchmark = True
+        self.seg_net.eval()
+        self.pixel_loss.eval()
+        start_time = time.time()
+        data_loader = self.val_loader if data_loader is None else data_loader
+        for j, data_dict in enumerate(data_loader):
+            self.optimizer.zero_grad()
+            (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
+
+            with torch.no_grad():
+                outputs = self.seg_net(*inputs)
+                loss = self.pixel_loss(
+                    outputs, targets,
+                    gathered=self.configer.get('network', 'gathered')
+                )
+
+                self.val_losses.update(loss.item(), batch_size)
+                if isinstance(outputs, dict):
+                    try:
+                        outputs = outputs['pred']
+                    except:
+                        outputs = outputs['seg']
+                self.evaluator.update_score(outputs, data_dict['meta'])
+
+            self.batch_time.update(time.time() - start_time)
+            start_time = time.time()
+
+        self.evaluator.update_performance()
+
+        self.configer.update(['val_loss'], self.val_losses.avg)
+        self.module_runner.save_net(self.seg_net, save_mode='performance')
+        # self.module_runner.save_net(self.seg_net, save_mode='val_loss')
+        
+        # Print the log info & reset the states.
+        self.evaluator.reduce_scores()
+        if get_rank() == 0:
+            Log.info('Test Time {t.sum:.3f}s, Loss {l.avg:.8f}'.format(t=self.batch_time, l=self.val_losses))
+            self.evaluator.print_scores()
+
+        self.batch_time.reset()
+        self.val_losses.reset()
+        self.evaluator.reset()
+        
+        self.seg_net.train()
+        self.pixel_loss.train()
 
 
 

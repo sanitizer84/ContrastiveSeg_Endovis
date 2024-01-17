@@ -105,25 +105,47 @@ class DataLoader(object):
             )
         )
         return valloader
-
+    
     def get_testloader(self, dataset=None):
         dataset = 'test' if dataset is None else dataset
         if self.configer.get('method') == 'fcn_segmentor':
-            Log.info('use CSDataTestLoader for test ...')
-            root_dir = self.configer.get('data', 'data_dir')
-            if isinstance(root_dir, list) and len(root_dir) == 1:
-                root_dir = root_dir[0]
-            test_loader = data.DataLoader(
-                CSDataTestLoader(root_dir=root_dir, dataset=dataset,
-                                 img_transform=self.img_transform,
-                                 configer=self.configer),
-                batch_size=self.configer.get('test', 'batch_size'), pin_memory=True,
-                num_workers=self.configer.get('data', 'workers'), shuffle=False,
-                collate_fn=lambda *args: collate(
-                    *args, trans_dict=self.configer.get('test', 'data_transformer')
-                )
+            #default manner: load the ground-truth label.
+            if get_rank() == 0: Log.info('use DefaultLoader for {}:'.format(dataset))
+            klass = DefaultLoader
+        else:
+            Log.error('Method: {} loader is invalid.'.format(self.configer.get('method')))
+            return None
+
+        loader, sampler = self.get_dataloader_sampler(klass, 'test', dataset)
+        valloader = data.DataLoader(
+            loader,
+            sampler=sampler,
+            batch_size=self.configer.get('test', 'batch_size') // get_world_size(), pin_memory=True,
+            num_workers=self.configer.get('data', 'workers'), shuffle=False,
+            collate_fn=lambda *args: collate(
+                *args, trans_dict=self.configer.get('test', 'data_transformer')
             )
-            return test_loader
+        )
+        return valloader
+
+    # def get_testloader(self, dataset=None):
+    #     dataset = 'test' if dataset is None else dataset
+    #     if self.configer.get('method') == 'fcn_segmentor':
+    #         Log.info('use CSDataTestLoader for test ...')
+    #         root_dir = self.configer.get('data', 'data_dir')
+    #         if isinstance(root_dir, list) and len(root_dir) == 1:
+    #             root_dir = root_dir[0]
+    #         test_loader = data.DataLoader(
+    #             CSDataTestLoader(root_dir=root_dir, dataset=dataset,
+    #                              img_transform=self.img_transform,
+    #                              configer=self.configer),
+    #             batch_size=self.configer.get('test', 'batch_size'), pin_memory=True,
+    #             num_workers=self.configer.get('data', 'workers'), shuffle=False,
+    #             collate_fn=lambda *args: collate(
+    #                 *args, trans_dict=self.configer.get('test', 'data_transformer')
+    #             )
+    #         )
+    #         return test_loader
 
 
 if __name__ == "__main__":

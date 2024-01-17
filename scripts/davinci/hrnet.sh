@@ -102,16 +102,16 @@ elif [ "$1"x == "test"x ]; then
     --model_name ${MODEL_NAME} \
     --checkpoints_name ${CHECKPOINTS_NAME} \
     --phase test \
-    --gpu 0 2 \
+    --gpu 2 3 \
     --resume ${P_PATH}/checkpoints/davinci/${CHECKPOINTS_NAME}_max_performance.pth \
     --test_dir ${DATA_DIR}/test \
     --out_dir ${SAVE_DIR}/${CHECKPOINTS_NAME}_t 
 
-elif [ "$1"x == "tsne"x ]; then
+elif [ "$1" == "tsne" ]; then
   python -u ${P_PATH}/main.py \
     --configs ${CONFIGS} \
     --drop_last y \
-    --phase val \
+    --phase tsne \
     --gathered y \
     --loss_balance y \
     --log_to_file n \
@@ -120,7 +120,7 @@ elif [ "$1"x == "tsne"x ]; then
     --max_iters ${MAX_ITERS} \
     --data_dir ${DATA_DIR} \
     --loss_type ${LOSS_TYPE} \
-    --gpu 1 3 \
+    --gpu 3 \
     --checkpoints_name ${CHECKPOINTS_NAME} \
     --resume_continue y \
     --resume ${P_PATH}/checkpoints/davinci/${CHECKPOINTS_NAME}_max_performance.pth \

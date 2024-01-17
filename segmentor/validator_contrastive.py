@@ -197,14 +197,47 @@ class Trainer(object):
     #         if self.configer.get('iters') == self.configer.get('solver', 'max_iters'):
     #             break
 
+    # # 为endovis2017数据集做的修改，共有10个dataset用于验证  
+    # def __val(self, data_loader=None):
+    #     # Validation function during the train phase.
+    #     self.seg_net.eval()
+    #     self.pixel_loss.eval()
+    #     dataset_list = ['val1', 'val2', 'val3', 'val4', 'val5', 'val6', 'val7', 'val8', 'val9', 'val10']
+    #     for valid in dataset_list:
+    #         data_loader = self.data_loader.get_valloader(valid)
+
+    #         for j, data_dict in enumerate(data_loader):
+    #             (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
+
+    #             with torch.no_grad():
+
+    #                 outputs = self.seg_net(*inputs, is_eval=True)
+    #                 # loss = self.pixel_loss(outputs, targets)               
+    #                 # self.val_losses.update(loss.item(), batch_size)
+    #                 # print(outputs)
+    #                 if isinstance(outputs, dict):
+    #                     self.evaluator.update_score(outputs['seg'], data_dict['meta'])
+    #                 else:
+    #                     self.evaluator.update_score(outputs, data_dict['meta'])
+
+
+    #         self.evaluator.update_performance()
+    #         # self.configer.update(['val_loss'], self.val_losses.avg)
+
+    #         # Print the log info & reset the states.
+    #         if get_rank() == 0:
+    #             Log.info(
+    #                 'Test Time {batch_time.sum:.3f}s, ({batch_time.avg:.3f})\t'
+    #                 'Loss {loss.avg:.8f}\n'.format(
+    #                     batch_time=self.batch_time, loss=self.val_losses))
+    #             self.evaluator.print_scores()
+
 
     def __val(self, data_loader=None):
         # Validation function during the train phase.
         self.seg_net.eval()
         self.pixel_loss.eval()
-
-        # 为endovis2017数据集做的修改，共有10个dataset用于验证    
-        dataset_list = ['val1', 'val2', 'val3', 'val4', 'val5', 'val6', 'val7', 'val8', 'val9', 'val10']
+        dataset_list = ['val']
         for valid in dataset_list:
             data_loader = self.data_loader.get_valloader(valid)
 
@@ -233,24 +266,9 @@ class Trainer(object):
                     'Loss {loss.avg:.8f}\n'.format(
                         batch_time=self.batch_time, loss=self.val_losses))
                 self.evaluator.print_scores()
-
-
+    
+    
     def train(self):
-        # if self.configer.get('network', 'resume') is not None:
-        #     if self.configer.get('network', 'resume_val'):
-        #         self.__val(data_loader=self.data_loader.get_valloader(dataset='val'))
-        #         return
-        #     elif self.configer.get('network', 'resume_train'):
-        #         self.__val(data_loader=self.data_loader.get_valloader(dataset='train'))
-        #         return
-        #     # return
-
-        # if self.configer.get('network', 'resume') is not None and self.configer.get('network', 'resume_val'):
-        #     self.__val(data_loader=self.data_loader.get_valloader(dataset='val'))
-        #     return
-
-        # while self.configer.get('iters') < self.configer.get('solver', 'max_iters'):
-        #     self.__train()
         self.__val(data_loader=self.data_loader.get_valloader(dataset='val'))
 
 

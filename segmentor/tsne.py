@@ -1,20 +1,24 @@
 import numpy as np
 import torch
-import torch.nn as nn
+# import torch.nn as nn
 import matplotlib.pyplot as plt  
 
 from lib.utils.tools.average_meter import AverageMeter
 from lib.datasets.data_loader import DataLoader
 from lib.loss.loss_manager import LossManager
 from lib.models.model_manager import ModelManager
-from lib.utils.tools.logger import Logger as Log
-from lib.vis.seg_visualizer import SegVisualizer
 from segmentor.tools.module_runner import ModuleRunner
 from segmentor.tools.optim_scheduler import OptimScheduler
 from segmentor.tools.data_helper import DataHelper
 from segmentor.tools.evaluator import get_evaluator
 from lib.utils.distributed import get_world_size, get_rank   #, is_distributed
 
+from matplotlib.colors import ListedColormap
+colors = ["#00ff00", "#33ffff", "#7dff0c", "#ff3700", "#18377d", "#bb9b19", "#38aff8", "#f880ed"]
+my_cmap = ListedColormap(colors, name="my_cmap")
+
+'''tsne cuda'''        
+from tsnecuda import TSNE
 
 class Trainer(object):
     # The class for Pose Estimation. Include train, val, val & predict.
@@ -23,7 +27,7 @@ class Trainer(object):
         self.batch_time = AverageMeter()
         # self.train_losses = AverageMeter()
         self.val_losses = AverageMeter()
-        self.seg_visualizer = SegVisualizer(configer)
+        # self.seg_visualizer = SegVisualizer(configer)
         self.loss_manager = LossManager(configer)
         self.module_runner = ModuleRunner(configer)
         self.model_manager = ModelManager(configer)
@@ -44,44 +48,21 @@ class Trainer(object):
     def _init_model(self):
         self.seg_net = self.model_manager.semantic_segmentor()
         self.seg_net = self.module_runner.load_net(self.seg_net)
-
-        # params_group = self._get_parameters()
-
         self.train_loader = self.data_loader.get_trainloader()
         self.val_loader = self.data_loader.get_valloader()
         self.pixel_loss = self.loss_manager.get_seg_loss()
         self.pixel_loss = self.module_runner.to_device(self.pixel_loss)
-
-
-    # def _get_parameters(self):
-    #     bb_lr = []
-    #     nbb_lr = []
-    #     fcn_lr = []
-    #     params_dict = dict(self.seg_net.named_parameters())
-    #     for key, value in params_dict.items():
-    #         if 'backbone' in key:
-    #             bb_lr.append(value)
-    #         elif 'aux_layer' in key or 'upsample_proj' in key:
-    #             fcn_lr.append(value)
-    #         else:
-    #             nbb_lr.append(value)
-
-    #     params = [{'params': bb_lr, 'lr': self.configer.get('lr', 'base_lr')},
-    #               {'params': fcn_lr, 'lr': self.configer.get('lr', 'base_lr') * 10},
-    #               {'params': nbb_lr, 'lr': self.configer.get('lr', 'base_lr') * self.configer.get('lr', 'nbb_mult')}]
-    #     return params
-
-  
     
     def __val(self, data_loader=None):
         self.seg_net.eval()
         self.pixel_loss.eval()
         allrow = None
-        count = 0
-        if get_rank() != 1: return
-        # data_loader = self.val_loader if data_loader is None else data_loader
+        
+        # Do this once
+        data_loader = self.val_loader if data_loader is None else data_loader
+        # count = 0
         # for j, data_dict in enumerate(data_loader):
-        #     self.optimizer.zero_grad()
+        #     # self.optimizer.zero_grad()
         #     (inputs, targets), batch_size = self.data_helper.prepare_data(data_dict)
         #     with torch.no_grad():
         #         outputs = self.seg_net(*inputs)
@@ -93,10 +74,9 @@ class Trainer(object):
 
         #     x = torch.squeeze(outputs)
         #     x = torch.reshape(x, [-1])
-
         #     t = torch.reshape(targets, [-1])
-        #     t = t.repeat([9])
             
+        #     x = x[:t.shape[0]]
         #     X = torch.stack((x, t))
         #     X = torch.permute(X, [1, 0])       
 
@@ -105,20 +85,19 @@ class Trainer(object):
         #     else:
         #         allrow = torch.vstack((allrow, X.cpu()))
         #     count += 1
-            # if count >200: break
+        #     if count >9: break
 
 
         
         # ''' tsne'''       
-        # allrow1 = allrow[allrow[:, 1] == 1.0][0:2000]
-        # allrow2 = allrow[allrow[:, 1] == 2.0][0:2000]
-        # allrow3 = allrow[allrow[:, 1] == 3.0][0:2000]
-        # allrow4 = allrow[allrow[:, 1] == 4.0][0:2000]
-        # allrow5 = allrow[allrow[:, 1] == 5.0][0:2000]
-        # allrow6 = allrow[allrow[:, 1] == 6.0][0:2000]
-        # allrow7 = allrow[allrow[:, 1] == 7.0][0:2000]
-        # allrow8 = allrow[allrow[:, 1] == 8.0][0:2000]
-        # allrow9 = allrow[allrow[:, 1] == 9.0][0:2000]
+        # allrow1 = allrow[allrow[:, 1] == 1.0][0:500]
+        # allrow2 = allrow[allrow[:, 1] == 2.0][0:500]
+        # allrow3 = allrow[allrow[:, 1] == 3.0][0:500]
+        # allrow4 = allrow[allrow[:, 1] == 4.0][0:500]
+        # allrow5 = allrow[allrow[:, 1] == 5.0][0:500]
+        # allrow6 = allrow[allrow[:, 1] == 6.0][0:500]
+        # allrow7 = allrow[allrow[:, 1] == 7.0][0:500]
+        # allrow8 = allrow[allrow[:, 1] == 8.0][0:500]
         # print(allrow1.shape)
         # print(allrow2.shape)
         # print(allrow3.shape)
@@ -127,7 +106,6 @@ class Trainer(object):
         # print(allrow6.shape)
         # print(allrow7.shape)
         # print(allrow8.shape)
-        # print(allrow9.shape)
 
 
         # allrow = torch.vstack((allrow1, 
@@ -137,38 +115,38 @@ class Trainer(object):
         #                        allrow5, 
         #                        allrow6, 
         #                        allrow7,
-        #                        allrow8,
-        #                        allrow9
+        #                        allrow8
         #                        ))
-        # np.save('allrow.npy', allrow)
-        '''tsne cuda'''        
-        from tsnecuda import TSNE
-        allrow = np.load('/home/duhj/ContrastiveSeg/scripts/davinci/allrow.npy')
-        
-                
-        for p in range(300, 800, 50):
-            for n in range(40000, 260000, 2500):
-                for b in range(10, 50, 10):
-                    print(p,' ', n, ' ', b)
-                    tsne = TSNE(perplexity=p, n_iter=n, num_neighbors=b, learning_rate=500)
-                    tsne_results = tsne.fit_transform(allrow)
-                    fig = plt.figure( figsize=(8, 8) )
-                    ax = fig.add_subplot(1, 1, 1, title='TSNE' )
-                    scatter  = ax.scatter(
-                        x=tsne_results[:, 0],
-                        y=tsne_results[:, 1],
-                        c=allrow[:, 1],
-                        cmap=plt.cm.get_cmap('rainbow'),
-                        s=2
-                        )
-                    legend1 = ax.legend(*scatter.legend_elements(), loc="best")       
-                    ax.add_artist(legend1)
-                    plt.axis('off')
-                    plt.savefig('T-SNE-p'+str(p)+'-n'+str(n)+'-b'+str(b)+'.png')
-                    plt.close(fig)
+        # np.save('allrow-old500.npy', allrow)
+        # # do this once
+
+        allrow = np.load('allrow-old500.npy') 
+        n = 100000
+        for p in range(1400, 400, -100):
+            for b in range(500, 100, -100): 
+                tsne_results =  TSNE(perplexity=p, 
+                                    n_iter=n, 
+                                    learning_rate=300,
+                                    num_neighbors=b,
+                                    n_iter_without_progress=4000,
+                                    random_seed=5
+                                    ).fit_transform(allrow)   
+                fig = plt.figure(figsize=(9, 9))
+                ax = fig.add_subplot(1, 1, 1)
+                ax.scatter(
+                    x=tsne_results[:, 0],
+                    y=tsne_results[:, 1],
+                    c=allrow[:, 1],
+                    cmap=plt.cm.get_cmap(my_cmap),
+                    s=2
+                    )
+                plt.axis('off')
+                plt.savefig('/home/duhj/tsne/p'+str(p)+'-n'+str(n)+'-b'+str(b)+'.png')
+                plt.close(fig)
+                print(p, n, b)
 
     def train(self):
-
+        print('start tsne...')
         self.__val(data_loader=self.data_loader.get_valloader(dataset='val'))
 
 

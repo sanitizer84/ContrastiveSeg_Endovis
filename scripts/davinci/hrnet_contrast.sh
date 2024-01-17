@@ -21,9 +21,9 @@ echo "Logging to $LOG_FILE"
 mkdir -p `dirname $LOG_FILE`
 
 PRETRAINED_MODEL="${P_PATH}/pretrained_model/hrnetv2_w48_imagenet_pretrained.pth"
-MAX_ITERS=67050
+MAX_ITERS=89400
 BATCH_SIZE=8
-BASE_LR=0.0065
+BASE_LR=0.01
 
 if [ "$1"x == "train"x ]; then
   python ${P_PATH}/main_contrastive.py \
@@ -37,7 +37,7 @@ if [ "$1"x == "train"x ]; then
     --log_file ${LOG_FILE} \
     --backbone ${BACKBONE} \
     --model_name ${MODEL_NAME} \
-    --gpu 2 3 \
+    --gpu 1 3 \
     --data_dir ${DATA_DIR} \
     --loss_type ${LOSS_TYPE} \
     --max_iters ${MAX_ITERS} \
@@ -62,7 +62,7 @@ elif [ "$1"x == "resume"x ]; then
     --max_iters ${MAX_ITERS} \
     --data_dir ${DATA_DIR} \
     --loss_type ${LOSS_TYPE} \
-    --gpu 2 3 \
+    --gpu 1 3 \
     --checkpoints_root ${CHECKPOINTS_ROOT} \
     --checkpoints_name ${CHECKPOINTS_NAME} \
     --resume_continue y \
@@ -79,8 +79,8 @@ elif [ "$1"x == "val"x ]; then
     --backbone ${BACKBONE} \
     --model_name ${MODEL_NAME} \
     --checkpoints_name ${CHECKPOINTS_NAME} \
-    --phase test \
-    --gpu 2 3 \
+    --phase val \
+    --gpu 1 3 \
     --resume ${P_PATH}/checkpoints/davinci/${CHECKPOINTS_NAME}_max_performance.pth \
     --loss_type ${LOSS_TYPE} \
     --test_dir ${DATA_DIR}/val/image \
@@ -96,13 +96,35 @@ elif [ "$1"x == "test"x ]; then
     --model_name ${MODEL_NAME} \
     --checkpoints_name ${CHECKPOINTS_NAME} \
     --phase test \
-    --gpu 2 3 \
+    --gpu 1 3 \
     --resume ${P_PATH}/checkpoints/davinci/${CHECKPOINTS_NAME}_max_performance.pth \
     --loss_type ${LOSS_TYPE} \
     --test_dir ${DATA_DIR}/test/image \
     --log_to_file n \
     --out_dir ${SAVE_DIR}/${CHECKPOINTS_NAME}_test \
     --distributed
+elif [ "$1" == "tsne" ]; then
+  python -u ${P_PATH}/main_contrastive.py \
+    --configs ${CONFIGS} \
+    --drop_last y \
+    --phase tsne \
+    --gathered y \
+    --loss_balance y \
+    --log_to_file n \
+    --backbone ${BACKBONE} \
+    --model_name ${MODEL_NAME} \
+    --max_iters ${MAX_ITERS} \
+    --data_dir ${DATA_DIR} \
+    --loss_type ${LOSS_TYPE} \
+    --gpu 3 \
+    --checkpoints_name ${CHECKPOINTS_NAME} \
+    --resume_continue y \
+    --resume ${P_PATH}/checkpoints/davinci/${CHECKPOINTS_NAME}_max_performance.pth \
+    --train_batch_size ${BATCH_SIZE} \
+    --distributed \
+    2>&1 | tee -a ${LOG_FILE}_tsne
+
+
 else
   echo "$1"x" is invalid..."
 fi

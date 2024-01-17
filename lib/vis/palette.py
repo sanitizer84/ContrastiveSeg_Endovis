@@ -43,19 +43,20 @@ def get_davinci_colors():
         The color map
     """
 
-    num_cls = 11
-    colors = [0] * (num_cls * 3)    # endovis 2018              endovis2017
-    colors[0:3] = (0, 0, 0)         # 0 background-tissue       background-tissue
-    colors[3:6] = (0, 255, 0)       # 1 instrument-shaft        Bipolar Forceps
-    colors[6:9] = (0, 255, 255)     # 2 instrument-clasper      Prograsp Forceps
-    colors[9:12] = (125, 255, 12)   # 3 instrument-wrist        Large Needle Driver
-    colors[12:15] = (255, 55, 0)    # 4 kidney-parenchyma       Vessel Sealer
-    colors[15:18] = (24, 55, 125)   # 5 covered-kidney"         Grasping Retractor
-    colors[18:21] = (187, 255, 25)  # 6 thread                  Monopolar Curved Scissors
-    colors[21:24] = (0, 255, 125)   # 7 clamps
-    colors[24:27] = (255, 255, 125) # 8 suturing-needle
-    colors[27:30] = (123, 15, 175)  # 9 suction-instrument
-    colors[30:33] = (124, 155, 5)   # 10 small-intestine
+    num_cls = 12
+    colors  = [0] * (num_cls * 3)     # endovis 2018              endovis2017
+    colors[0:3]   = (0, 0, 0)         # 0 background-tissue       background-tissue
+    colors[3:6]   = (0, 255, 0)       # 1 instrument-shaft        Bipolar Forceps
+    colors[6:9]   = (0, 255, 255)     # 2 instrument-clasper      Prograsp Forceps
+    colors[9:12]  = (125, 255, 12)    # 3 instrument-wrist        Large Needle Driver
+    colors[12:15] = (255, 55, 0)      # 4 kidney-parenchyma       Vessel Sealer
+    colors[15:18] = (24, 55, 125)     # 5 covered-kidney          Grasping Retractor
+    colors[18:21] = (187, 155, 25)    # 6 thread                  Monopolar Curved Scissors
+    colors[21:24] = (0, 255, 125)     # 7 clamps
+    colors[24:27] = (255, 255, 125)   # 8 suturing-needle
+    colors[27:30] = (123, 15, 175)    # 9 suction-instrument
+    colors[30:33] = (124, 155, 5)     # 10 small-intestine
+    colors[33:36] = (12, 255, 141)    # 11 ultrasound-probe
     return colors
 
 def get_cityscapes_colors():

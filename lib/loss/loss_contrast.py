@@ -275,8 +275,7 @@ class ContrastCELoss(nn.Module, ABC):
         if with_embed is True:
             return loss + self.loss_weight * loss_contrast
 
-        
-        # return loss + 0 * loss_contrast  # just a trick to avoid errors in distributed training
+        return loss + 0 * loss_contrast  # just a trick to avoid errors in distributed training
     
 
 class ContrastAuxCELoss(nn.Module, ABC):
